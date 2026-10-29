@@ -48,7 +48,7 @@ func (s *HybridSearcher) SearchRRF(
 	bm25Ranks map[int64]int, // ChunkID -> 1-based BM25 rank
 	topK int,
 ) []ScoredChunk {
-	if len(chunks) == 0 {
+	if len(chunks) == 0 || len(queryVector) == 0 {
 		return nil
 	}
 

@@ -45,6 +45,7 @@ func Open(dbPath string) (*Storage, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to open sqlite database: %w", err)
 	}
+	db.SetMaxOpenConns(1)
 
 	s := &Storage{db: db}
 	if err := s.InitSchema(); err != nil {

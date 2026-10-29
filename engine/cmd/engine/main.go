@@ -114,6 +114,9 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 
 	// Open or create SQLite storage in workspace storage directory
 	dbPath := filepath.Join(params.StoragePath, "semantic_index.db")
+	if s.storage != nil {
+		_ = s.storage.Close()
+	}
 	store, err := storage.Open(dbPath)
 	if err != nil {
 		s.mu.Unlock()

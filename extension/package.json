@@ -1,0 +1,90 @@
+{
+  "name": "semantic-navigator",
+  "displayName": "Semantic Navigator",
+  "description": "Semantic code search powered by vector embeddings and hybrid RRF retrieval",
+  "version": "0.1.0",
+  "publisher": "kontur-team",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "semanticNavigator.search",
+        "title": "Search Code",
+        "category": "Semantic Navigator"
+      },
+      {
+        "command": "semanticNavigator.indexWorkspace",
+        "title": "Reindex Workspace",
+        "category": "Semantic Navigator"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "semanticNavigator.search",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+alt+f"
+      }
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "semantic-navigator",
+          "title": "Semantic Navigator",
+          "icon": "$(search)"
+        }
+      ]
+    },
+    "views": {
+      "semantic-navigator": [
+        {
+          "id": "semanticNavigator.resultsView",
+          "name": "Search Results"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "Semantic Navigator",
+      "properties": {
+        "semanticNavigator.providerUrl": {
+          "type": "string",
+          "default": "https://api.openai.com/v1",
+          "description": "OpenAI-compatible embeddings endpoint URL (OpenAI, Ollama, LM Studio, or internal gateway)"
+        },
+        "semanticNavigator.apiKey": {
+          "type": "string",
+          "default": "",
+          "description": "API key for the embedding provider"
+        },
+        "semanticNavigator.model": {
+          "type": "string",
+          "default": "text-embedding-3-small",
+          "description": "Model identifier for generating embeddings"
+        },
+        "semanticNavigator.enginePath": {
+          "type": "string",
+          "default": "",
+          "description": "Optional path to the custom semantic-engine binary"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.3"
+  }
+}

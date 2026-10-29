@@ -135,3 +135,74 @@ namespace Kontur.Security
 		t.Errorf("expected truncated content, length is %d", len(capped))
 	}
 }
+
+func TestCSharpTypicalSyntaxAndExactRanges(t *testing.T) {
+	code := `namespace Demo;
+public class Example
+{
+    /// <summary>First documentation.</summary>
+    [Obsolete]
+    public string First(
+        string text)
+    {
+        // } fake closing brace
+        var literal = "}";
+        var verbatim = @"{";
+        var raw = """ } { """;
+        return literal + verbatim + raw;
+    }
+    public int Second() => 2;
+    public T Identity<T>(T value)
+    {
+        return value;
+    }
+    public void Third() { }
+    public void WithLambda()
+    {
+        Func<int, int> f = x => x + 1;
+    }
+    public void Last() { }
+}`
+	chunks, err := NewLanguageAwareChunker().ChunkFile("Example.cs", []byte(code))
+	if err != nil {
+		t.Fatal(err)
+	}
+	names := []string{"First", "Second", "Identity", "Third", "WithLambda", "Last"}
+	if len(chunks) != len(names) {
+		t.Fatalf("expected %v, got %+v", names, chunks)
+	}
+	lines := strings.Split(code, "\n")
+	for i, chunk := range chunks {
+		if chunk.SymbolName != names[i] {
+			t.Fatalf("unexpected symbol: %s", chunk.SymbolName)
+		}
+		if chunk.RawCode != strings.Join(lines[chunk.StartLine-1:chunk.EndLine], "\n") {
+			t.Fatalf("inaccurate source range: %+v", chunk)
+		}
+		if strings.Contains(chunk.RawCode, "public int Second") && chunk.SymbolName == "First" {
+			t.Fatal("string/comment braces consumed next method")
+		}
+	}
+	if chunks[0].StartLine != 4 || chunks[0].EndLine != 14 {
+		t.Fatalf("doc or method range wrong: %+v", chunks[0])
+	}
+}
+
+func TestNestedClassContextDoesNotLeak(t *testing.T) {
+	code := `namespace Demo;
+public class Outer
+{
+ public class Inner
+ {
+  public int Inside() => 1;
+ }
+ public int Outside() => 2;
+}`
+	chunks, err := NewLanguageAwareChunker().ChunkFile("Nested.cs", []byte(code))
+	if err != nil || len(chunks) != 2 {
+		t.Fatalf("chunks=%+v err=%v", chunks, err)
+	}
+	if chunks[0].ContextPath != "Demo > Outer > Inner > Inside" || chunks[1].ContextPath != "Demo > Outer > Outside" {
+		t.Fatalf("bad scopes: %+v", chunks)
+	}
+}

@@ -1,0 +1,17 @@
+{
+  "result": "PASS",
+  "hostVersion": "1.143.1",
+  "provider": "local mock, no API key",
+  "indexedChunks": 12,
+  "checks": [
+    "activation opt-in",
+    "native engine startup",
+    "indexing",
+    "exact symbol search",
+    "editor line selection",
+    "create/change/rename/delete watcher",
+    "model invalidation",
+    "search command",
+    "sidebar command"
+  ]
+}

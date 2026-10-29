@@ -65,8 +65,7 @@ func (c *LanguageAwareChunker) ChunkFile(filePath string, content []byte) ([]Cod
 var (
 	csNamespaceRegex = regexp.MustCompile(`(?m)^\s*namespace\s+([A-Za-z0-9_.]+)`)
 	csClassRegex     = regexp.MustCompile(`(?m)^\s*(?:(?:public|private|protected|internal|file|static|abstract|sealed|partial)\s+)*(?:class|struct|interface|record)\s+([A-Za-z0-9_]+)`)
-	csMethodRegex    = regexp.MustCompile(`(?m)^\s*(?:\[[^\]]+\]\s*)*(?:(?:public|private|protected|internal|static|async|virtual|override|abstract|sealed)\s+)*(?:[A-Za-z0-9_<>,\[\]?]+)\s+([A-Za-z0-9_]+)\s*\([^\)]*\)`)
-
+	csMethodRegex    = regexp.MustCompile(`(?m)^\s*(?:\[[^\]]+\]\s*)*(?:(?:public|private|protected|internal|static|async|virtual|override|abstract|sealed)\s+)*(?:[A-Za-z0-9_.,<>\[\]?]+)\s+([A-Za-z0-9_]+)(?:<[^>]+>)?\s*\(`)
 )
 
 func (c *LanguageAwareChunker) chunkCSharp(filePath string, lines []string) ([]CodeChunk, error) {
@@ -74,10 +73,24 @@ func (c *LanguageAwareChunker) chunkCSharp(filePath string, lines []string) ([]C
 
 	currentNamespace := ""
 	currentClass := ""
+	type classScope struct {
+		name string
+		end  int
+	}
+	var classes []classScope
+	masked := strings.Split(maskCSharp(strings.Join(lines, "\n")), "\n")
 
 	i := 0
 	for i < len(lines) {
-		line := lines[i]
+		line := masked[i]
+		for len(classes) > 0 && i >= classes[len(classes)-1].end {
+			classes = classes[:len(classes)-1]
+		}
+		names := []string{}
+		for _, scope := range classes {
+			names = append(names, scope.name)
+		}
+		currentClass = strings.Join(names, " > ")
 
 		// Track namespace
 		if m := csNamespaceRegex.FindStringSubmatch(line); len(m) > 1 {
@@ -88,7 +101,10 @@ func (c *LanguageAwareChunker) chunkCSharp(filePath string, lines []string) ([]C
 
 		// Track class/struct/record
 		if m := csClassRegex.FindStringSubmatch(line); len(m) > 1 {
-			currentClass = m[1]
+			end, _ := extractCSharpBlock(masked, i)
+			classes = append(classes, classScope{m[1], end})
+			i++
+			continue
 		}
 
 		// Check method declaration
@@ -105,9 +121,9 @@ func (c *LanguageAwareChunker) chunkCSharp(filePath string, lines []string) ([]C
 				}
 
 				// Find closing brace of method
-				endLine, methodLines := extractBlock(lines, i)
-				if endLine > startLine {
-					rawCode := strings.Join(methodLines, "\n")
+				endLine, _ := extractCSharpBlock(masked, i)
+				if endLine >= startLine {
+					rawCode := strings.Join(lines[startLine-1:endLine], "\n")
 
 					// Build context breadcrumbs: Namespace > Class > Method
 					var contextParts []string
@@ -192,7 +208,7 @@ func (c *LanguageAwareChunker) chunkTypeScript(filePath string, lines []string) 
 		if symName != "" && !strings.HasPrefix(strings.TrimSpace(line), "//") {
 			startLine := i + 1
 			endLine, blockLines := extractBlock(lines, i)
-			if endLine > startLine {
+			if endLine >= startLine {
 				rawCode := strings.Join(blockLines, "\n")
 				contextPath := symName
 				if currentClass != "" {
@@ -239,7 +255,7 @@ func (c *LanguageAwareChunker) chunkGo(filePath string, lines []string) ([]CodeC
 			funcName := m[1]
 			startLine := i + 1
 			endLine, blockLines := extractBlock(lines, i)
-			if endLine > startLine {
+			if endLine >= startLine {
 				rawCode := strings.Join(blockLines, "\n")
 				enrichedContent := fmt.Sprintf("// File: %s\n// Function: %s\n%s", filepath.Base(filePath), funcName, rawCode)
 				hash := hashString(filePath + ":" + funcName + ":" + rawCode)
@@ -437,4 +453,118 @@ func EnforceTokenBudget(content string, maxTokens int) string {
 		return content[:maxChars] + "\n// ... [truncated to fit token budget]"
 	}
 	return content
+}
+
+// maskCSharp is a small lexical mask, not a syntax parser. It preserves byte
+// positions/newlines while hiding comments, char literals and ordinary/verbatim/
+// raw strings so their braces cannot consume neighbouring methods.
+func maskCSharp(text string) string {
+	out := []byte(text)
+	blank := func(a, b int) {
+		for k := a; k < b; k++ {
+			if out[k] != '\n' && out[k] != '\r' {
+				out[k] = ' '
+			}
+		}
+	}
+	for i := 0; i < len(text); {
+		start := i
+		if strings.HasPrefix(text[i:], "//") {
+			for i < len(text) && text[i] != '\n' {
+				i++
+			}
+			blank(start, i)
+			continue
+		}
+		if strings.HasPrefix(text[i:], "/*") {
+			i += 2
+			for i < len(text) && !strings.HasPrefix(text[i:], "*/") {
+				i++
+			}
+			if i < len(text) {
+				i += 2
+			}
+			blank(start, i)
+			continue
+		}
+		if text[i] == '"' || text[i] == '\'' {
+			quote := text[i]
+			count := 1
+			if quote == '"' {
+				for i+count < len(text) && text[i+count] == '"' {
+					count++
+				}
+			}
+			if count >= 3 {
+				delimiter := strings.Repeat("\"", count)
+				i += count
+				for i < len(text) && !strings.HasPrefix(text[i:], delimiter) {
+					i++
+				}
+				if i < len(text) {
+					i += count
+				}
+			} else {
+				verbatim := quote == '"' && start > 0 && (text[start-1] == '@' || (start > 1 && text[start-2:start] == "@$"))
+				i++
+				for i < len(text) {
+					if !verbatim && text[i] == '\\' {
+						i += 2
+						continue
+					}
+					if text[i] == quote {
+						if verbatim && i+1 < len(text) && text[i+1] == quote {
+							i += 2
+							continue
+						}
+						i++
+						break
+					}
+					i++
+				}
+				if i > len(text) {
+					i = len(text)
+				}
+			}
+			blank(start, i)
+			continue
+		}
+		i++
+	}
+	return string(out)
+}
+
+func extractCSharpBlock(masked []string, start int) (int, []string) {
+	braces, parens := 0, 0
+	foundBrace := false
+	expression := false
+	for i := start; i < len(masked); i++ {
+		line := masked[i]
+		if !foundBrace && strings.Contains(line, "=>") {
+			expression = true
+		}
+		for _, ch := range line {
+			switch ch {
+			case '(':
+				parens++
+			case ')':
+				parens--
+			case '{':
+				braces++
+				foundBrace = true
+			case '}':
+				braces--
+				if foundBrace && braces == 0 && !expression {
+					return i + 1, nil
+				}
+			case ';':
+				// Includes expression-bodied and abstract/interface methods. Ignore default
+				// values inside the parameter list and semicolons inside method bodies.
+				if braces == 0 && parens == 0 {
+					return i + 1, nil
+				}
+			}
+		}
+	}
+	return len(masked), nil
 }

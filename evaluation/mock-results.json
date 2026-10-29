@@ -1,0 +1,699 @@
+{
+  "mode": "MOCK_FUNCTIONAL_ONLY",
+  "timestampUTC": "2026-10-29T17:22:31.509678+00:00",
+  "model": "mock-token-hash-128",
+  "providerUrl": "http://127.0.0.1:53430/v1",
+  "engineVersion": "0.1.0",
+  "datasetSHA256": "737b2b9dbc5175908039b966f1efd5caf16aacee35f935c1cf68f2ec6cbe2542",
+  "sourceSHA256": "78835e60d62dcf1e1ed3409da18f511d4f73573c81724b94e204fdb4e3edb341",
+  "indexingMs": 5.395291002059821,
+  "queryCount": 30,
+  "metrics": {
+    "Hit@5": 0.7333333333333333,
+    "Recall@5": 0.7333333333333333,
+    "MRR@10": 0.7474999999999999
+  },
+  "byKind": {
+    "ru": {
+      "Hit@5": 0.3333333333333333,
+      "Recall@5": 0.3333333333333333,
+      "MRR@10": 0.3687500000000001
+    },
+    "symbol": {
+      "Hit@5": 1.0,
+      "Recall@5": 1.0,
+      "MRR@10": 1.0
+    },
+    "en": {
+      "Hit@5": 1.0,
+      "Recall@5": 1.0,
+      "MRR@10": 1.0
+    }
+  },
+  "latencyMs": {
+    "p50": 0.5603750032605603,
+    "p95": 0.742958000046201
+  },
+  "queries": [
+    {
+      "id": "q01",
+      "kind": "ru",
+      "query": "проверить срок действия токена и наличие в списке разрешённых",
+      "relevant": [
+        "ShopService.cs#ValidateToken"
+      ],
+      "ranked": [
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#PaginateOrders"
+      ],
+      "latencyMs": 1.0175830029766075,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q02",
+      "kind": "symbol",
+      "query": "ValidateToken",
+      "relevant": [
+        "ShopService.cs#ValidateToken"
+      ],
+      "ranked": [
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock"
+      ],
+      "latencyMs": 0.742958000046201,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q03",
+      "kind": "ru",
+      "query": "хеширование пароля с солью",
+      "relevant": [
+        "ShopService.cs#HashPassword"
+      ],
+      "ranked": [
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#FindOrdersByDate"
+      ],
+      "latencyMs": 0.5603750032605603,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q04",
+      "kind": "symbol",
+      "query": "HashPassword",
+      "relevant": [
+        "ShopService.cs#HashPassword"
+      ],
+      "ranked": [
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "latencyMs": 0.5792500014649704,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q05",
+      "kind": "ru",
+      "query": "посчитать стоимость счёта со скидкой",
+      "relevant": [
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "ranked": [
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.5640419985866174,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q06",
+      "kind": "symbol",
+      "query": "CalculateInvoiceTotal",
+      "relevant": [
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "ranked": [
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#PaginateOrders"
+      ],
+      "latencyMs": 0.5916670052101836,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q07",
+      "kind": "ru",
+      "query": "перевести рубли в другую валюту",
+      "relevant": [
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "ranked": [
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateToken"
+      ],
+      "latencyMs": 0.6604579975828528,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q08",
+      "kind": "symbol",
+      "query": "ConvertCurrency",
+      "relevant": [
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "ranked": [
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock"
+      ],
+      "latencyMs": 0.5996660038363189,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q09",
+      "kind": "ru",
+      "query": "зарезервировать товар на складе если его хватает",
+      "relevant": [
+        "ShopService.cs#ReserveStock"
+      ],
+      "ranked": [
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken"
+      ],
+      "latencyMs": 0.5735419981647283,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q10",
+      "kind": "symbol",
+      "query": "ReserveStock",
+      "relevant": [
+        "ShopService.cs#ReserveStock"
+      ],
+      "ranked": [
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.5203749969950877,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q11",
+      "kind": "ru",
+      "query": "найти заказы за период между датами",
+      "relevant": [
+        "ShopService.cs#FindOrdersByDate"
+      ],
+      "ranked": [
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#HashPassword"
+      ],
+      "latencyMs": 0.532291000126861,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q12",
+      "kind": "symbol",
+      "query": "FindOrdersByDate",
+      "relevant": [
+        "ShopService.cs#FindOrdersByDate"
+      ],
+      "ranked": [
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "latencyMs": 0.48683299974072725,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q13",
+      "kind": "ru",
+      "query": "показать страницу списка заказов",
+      "relevant": [
+        "ShopService.cs#PaginateOrders"
+      ],
+      "ranked": [
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#PaginateOrders"
+      ],
+      "latencyMs": 0.4893749937764369,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q14",
+      "kind": "symbol",
+      "query": "PaginateOrders",
+      "relevant": [
+        "ShopService.cs#PaginateOrders"
+      ],
+      "ranked": [
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.46783399739069864,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q15",
+      "kind": "ru",
+      "query": "выгрузить заказы в csv с экранированием кавычек",
+      "relevant": [
+        "ShopService.cs#ExportOrdersCsv"
+      ],
+      "ranked": [
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ReserveStock"
+      ],
+      "latencyMs": 0.6497919966932386,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q16",
+      "kind": "symbol",
+      "query": "ExportOrdersCsv",
+      "relevant": [
+        "ShopService.cs#ExportOrdersCsv"
+      ],
+      "ranked": [
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.4931250005029142,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q17",
+      "kind": "ru",
+      "query": "убрать повторяющиеся почтовые адреса без учёта регистра",
+      "relevant": [
+        "ShopService.cs#DeduplicateEmails"
+      ],
+      "ranked": [
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.5391669983509928,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q18",
+      "kind": "symbol",
+      "query": "DeduplicateEmails",
+      "relevant": [
+        "ShopService.cs#DeduplicateEmails"
+      ],
+      "ranked": [
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.46395800018217415,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q19",
+      "kind": "ru",
+      "query": "повторить неудачный сетевой запрос с задержкой",
+      "relevant": [
+        "ShopService.cs#RetryAsync"
+      ],
+      "ranked": [
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken"
+      ],
+      "latencyMs": 0.47162499686237425,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q20",
+      "kind": "symbol",
+      "query": "RetryAsync",
+      "relevant": [
+        "ShopService.cs#RetryAsync"
+      ],
+      "ranked": [
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.44587500451598316,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q21",
+      "kind": "ru",
+      "query": "проверить размер и расширение загружаемого файла",
+      "relevant": [
+        "ShopService.cs#ValidateUpload"
+      ],
+      "ranked": [
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateUpload"
+      ],
+      "latencyMs": 0.4791250030393712,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q22",
+      "kind": "symbol",
+      "query": "ValidateUpload",
+      "relevant": [
+        "ShopService.cs#ValidateUpload"
+      ],
+      "ranked": [
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.4546670024865307,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q23",
+      "kind": "ru",
+      "query": "скрыть номер банковской карты кроме последних четырёх цифр",
+      "relevant": [
+        "ShopService.cs#MaskCardNumber"
+      ],
+      "ranked": [
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.6303339978330769,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q24",
+      "kind": "symbol",
+      "query": "MaskCardNumber",
+      "relevant": [
+        "ShopService.cs#MaskCardNumber"
+      ],
+      "ranked": [
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.6499169976450503,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q25",
+      "kind": "en",
+      "query": "reject an expired access token",
+      "relevant": [
+        "ShopService.cs#ValidateToken"
+      ],
+      "ranked": [
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders"
+      ],
+      "latencyMs": 0.5417079955805093,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q26",
+      "kind": "en",
+      "query": "derive a password hash with PBKDF2",
+      "relevant": [
+        "ShopService.cs#HashPassword"
+      ],
+      "ranked": [
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ExportOrdersCsv"
+      ],
+      "latencyMs": 0.5891249966225587,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q27",
+      "kind": "en",
+      "query": "calculate total after discount",
+      "relevant": [
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "ranked": [
+        "ShopService.cs#CalculateInvoiceTotal",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ReserveStock"
+      ],
+      "latencyMs": 0.5118330009281635,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q28",
+      "kind": "en",
+      "query": "convert rubles at an exchange rate",
+      "relevant": [
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "ranked": [
+        "ShopService.cs#ConvertCurrency",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#CalculateInvoiceTotal"
+      ],
+      "latencyMs": 0.5784160020994022,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q29",
+      "kind": "en",
+      "query": "reserve available inventory",
+      "relevant": [
+        "ShopService.cs#ReserveStock"
+      ],
+      "ranked": [
+        "ShopService.cs#ReserveStock",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "latencyMs": 0.5872920010006055,
+      "engineDurationMs": 0
+    },
+    {
+      "id": "q30",
+      "kind": "en",
+      "query": "filter orders by creation date",
+      "relevant": [
+        "ShopService.cs#FindOrdersByDate"
+      ],
+      "ranked": [
+        "ShopService.cs#FindOrdersByDate",
+        "ShopService.cs#ValidateToken",
+        "ShopService.cs#ExportOrdersCsv",
+        "ShopService.cs#PaginateOrders",
+        "ShopService.cs#ValidateUpload",
+        "ShopService.cs#HashPassword",
+        "ShopService.cs#DeduplicateEmails",
+        "ShopService.cs#RetryAsync",
+        "ShopService.cs#MaskCardNumber",
+        "ShopService.cs#ConvertCurrency"
+      ],
+      "latencyMs": 0.7275000025401823,
+      "engineDurationMs": 0
+    }
+  ]
+}

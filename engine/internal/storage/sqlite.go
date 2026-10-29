@@ -82,7 +82,8 @@ func (s *Storage) InitSchema() error {
 	);
 
 	CREATE INDEX IF NOT EXISTS idx_chunks_file_path ON chunks(file_path);
-	CREATE UNIQUE INDEX IF NOT EXISTS idx_chunks_file_hash ON chunks(file_path, chunk_hash);
+	DROP INDEX IF EXISTS idx_chunks_file_hash;
+	CREATE INDEX IF NOT EXISTS idx_chunks_file_hash_lookup ON chunks(file_path, chunk_hash);
 
 	CREATE TABLE IF NOT EXISTS metadata (
 		key TEXT PRIMARY KEY,
@@ -198,7 +199,7 @@ func (s *Storage) SearchBM25(query string, topK int) ([]BM25Match, error) {
 	}
 
 	sqlQuery := `
-		SELECT chunk_id, bm25(chunks_fts, 10.0, 5.0, 1.0) as score
+		SELECT chunk_id, bm25(chunks_fts, 0.0, 0.0, 10.0, 5.0, 1.0) as score
 		FROM chunks_fts
 		WHERE chunks_fts MATCH ?
 		ORDER BY score ASC
@@ -240,6 +241,15 @@ func sanitizeFTS5Query(query string) string {
 
 // SaveChunks replaces chunks for a given file in both chunks table and FTS5 index.
 func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
+	return s.saveFile(filePath, "", chunks, false)
+}
+
+// ReplaceFile commits chunks, FTS entries and the file hash together.
+func (s *Storage) ReplaceFile(filePath, hash string, chunks []Chunk) error {
+	return s.saveFile(filePath, hash, chunks, true)
+}
+
+func (s *Storage) saveFile(filePath, hash string, chunks []Chunk, updateHash bool) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -301,6 +311,11 @@ func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 		}
 	}
 
+	if updateHash {
+		if _, err := tx.Exec(`INSERT INTO files(path, hash, updated_at) VALUES (?, ?, ?) ON CONFLICT(path) DO UPDATE SET hash=excluded.hash, updated_at=excluded.updated_at`, filePath, hash, time.Now()); err != nil {
+			return err
+		}
+	}
 	return tx.Commit()
 }
 
@@ -377,4 +392,52 @@ func (s *Storage) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.db.Close()
+}
+
+// EnsureFingerprint clears incompatible vectors before they can be searched.
+// API keys are intentionally excluded from the caller's fingerprint.
+func (s *Storage) EnsureFingerprint(fingerprint string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	tx, err := s.db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	var previous string
+	err = tx.QueryRow("SELECT value FROM metadata WHERE key='fingerprint'").Scan(&previous)
+	if err != nil && err != sql.ErrNoRows {
+		return err
+	}
+	if previous == fingerprint {
+		return nil
+	}
+	for _, statement := range []string{"DELETE FROM chunks_fts", "DELETE FROM chunks", "DELETE FROM files", "DELETE FROM metadata"} {
+		if _, err := tx.Exec(statement); err != nil {
+			return err
+		}
+	}
+	if _, err := tx.Exec("INSERT INTO metadata(key, value) VALUES ('fingerprint', ?)", fingerprint); err != nil {
+		return err
+	}
+	return tx.Commit()
+}
+
+func (s *Storage) ListFiles() ([]string, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	rows, err := s.db.Query("SELECT path FROM files")
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var paths []string
+	for rows.Next() {
+		var path string
+		if err := rows.Scan(&path); err != nil {
+			return nil, err
+		}
+		paths = append(paths, path)
+	}
+	return paths, rows.Err()
 }

@@ -1,0 +1,11 @@
+{
+  "version": "2.0.0",
+  "tasks": [{
+    "label": "Build Semantic Navigator",
+    "type": "shell",
+    "command": "./scripts/build.sh",
+    "options": {"cwd": "${workspaceFolder}"},
+    "problemMatcher": ["$tsc"],
+    "group": {"kind": "build", "isDefault": true}
+  }]
+}

@@ -158,3 +158,51 @@ func TestFTS5Support(t *testing.T) {
 	}
 	t.Logf("Found %d BM25 matches for ValidateToken, top chunk ID=%d, score=%f", len(matches), matches[0].ChunkID, matches[0].BM25Score)
 }
+
+func TestBM25WeightsPreferSymbolOverBody(t *testing.T) {
+	store, err := Open(filepath.Join(t.TempDir(), "weights.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	chunks := []Chunk{
+		{ChunkHash: "symbol", SymbolName: "ValidateToken", Context: "Other", Content: "Other", Embedding: []float32{1}},
+		{ChunkHash: "context", SymbolName: "Other", Context: "ValidateToken", Content: "Other", Embedding: []float32{1}},
+		{ChunkHash: "body", SymbolName: "Other", Context: "Other", Content: "ValidateToken", Embedding: []float32{1}},
+	}
+	if err := store.ReplaceFile("/service.cs", "hash", chunks); err != nil {
+		t.Fatal(err)
+	}
+	results, err := store.SearchBM25("ValidateToken", 3)
+	if err != nil || len(results) != 3 {
+		t.Fatalf("results=%v error=%v", results, err)
+	}
+	stored, _ := store.GetAllChunks()
+	if results[0].ChunkID != stored[0].ID || results[1].ChunkID != stored[1].ID {
+		t.Fatalf("symbol/context/body order incorrect: %+v", results)
+	}
+}
+
+func TestReplaceFileRollsBackChunksFTSAndHashTogether(t *testing.T) {
+	store, err := Open(filepath.Join(t.TempDir(), "atomic.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer store.Close()
+	before := []Chunk{{ChunkHash: "old", SymbolName: "OldMethod", Content: "old body", Embedding: []float32{1}}}
+	if err := store.ReplaceFile("/source.cs", "old-hash", before); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.db.Exec(`CREATE TRIGGER reject_new BEFORE INSERT ON chunks WHEN NEW.chunk_hash='bad' BEGIN SELECT RAISE(ABORT,'injected save failure'); END`); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ReplaceFile("/source.cs", "new-hash", []Chunk{{ChunkHash: "bad", SymbolName: "NewMethod", Embedding: []float32{1}}}); err == nil {
+		t.Fatal("expected save failure")
+	}
+	hash, _ := store.GetFileHash("/source.cs")
+	chunks, _ := store.GetAllChunks()
+	lexical, _ := store.SearchBM25("OldMethod", 5)
+	if hash != "old-hash" || len(chunks) != 1 || chunks[0].SymbolName != "OldMethod" || len(lexical) != 1 {
+		t.Fatalf("partial commit: hash=%s chunks=%v lexical=%v", hash, chunks, lexical)
+	}
+}

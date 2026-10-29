@@ -5,147 +5,97 @@ import { SearchResultsProvider } from './resultsView';
 import { StatusBarManager } from './statusBar';
 import { ProviderConfig } from './types';
 
-let client: EngineClient | null = null;
-let statusBar: StatusBarManager | null = null;
-let outputChannel: vscode.OutputChannel;
-let resultsProvider: SearchResultsProvider;
+let client: EngineClient | undefined;
 
 export async function activate(context: vscode.ExtensionContext) {
-  outputChannel = vscode.window.createOutputChannel('Semantic Navigator');
-  outputChannel.appendLine('[extension] Activating Semantic Navigator...');
+  const output = vscode.window.createOutputChannel('Semantic Navigator');
+  client = new EngineClient(output);
+  const engine = client;
+  const status = new StatusBarManager();
+  const results = new SearchResultsProvider();
+  const view = vscode.window.createTreeView('semanticNavigator.resultsView', { treeDataProvider: results });
+  const quickPick = new QuickPickSearch(engine);
+  let timer: NodeJS.Timeout | undefined;
+  let restarting: Promise<void> = Promise.resolve();
+  let disposed = false;
+  let indexingEnabled = false;
 
-  client = new EngineClient(outputChannel);
-  statusBar = new StatusBarManager();
-  resultsProvider = new SearchResultsProvider();
-
-  // Register sidebar TreeView
-  context.subscriptions.push(
-    vscode.window.registerTreeDataProvider(
-      'semanticNavigator.resultsView',
-      resultsProvider
-    )
-  );
-
-  // Connect background indexing progress to status bar
-  context.subscriptions.push(
-    client.onProgress((progress) => {
-      statusBar?.updateProgress(progress);
-    })
-  );
-
-  // Initialize engine when workspace is open
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (workspaceFolders && workspaceFolders.length > 0) {
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const storagePath = context.storageUri
-      ? context.storageUri.fsPath
-      : context.globalStorageUri.fsPath;
-
+  const report = async (error: unknown) => {
+    const message = error instanceof Error ? error.message : String(error);
+    output.appendLine(message);
+    status.updateProgress({ phase: 'error', message, percentage: 0, totalFiles: 0, processedFiles: 0, totalChunks: 0, processedChunks: 0 });
+    const action = await vscode.window.showErrorMessage(`Semantic Navigator: ${message}`, 'Open Settings', 'Open Output Log');
+    if (action === 'Open Settings') { await vscode.commands.executeCommand('workbench.action.openSettings', 'semanticNavigator'); }
+    if (action === 'Open Output Log') { output.show(); }
+  };
+  const start = async () => {
+    if (disposed) { return; }
+    indexingEnabled = false;
+    quickPick.dispose();
+    results.clear();
+    view.description = '';
+    await engine.stop();
+    const root = vscode.workspace.workspaceFolders?.[0];
+    if (!root) { status.setIdle(); return; }
     const config = vscode.workspace.getConfiguration('semanticNavigator');
     const provider: ProviderConfig = {
       type: 'openai-compatible',
-      baseUrl: config.get<string>('providerUrl', 'https://api.openai.com/v1'),
-      apiKey: config.get<string>('apiKey', ''),
-      model: config.get<string>('model', 'text-embedding-3-small'),
+      baseUrl: config.get('providerUrl', 'https://api.openai.com/v1'),
+      apiKey: config.get('apiKey', ''),
+      model: config.get('model', 'text-embedding-3-small'),
     };
-
-    const enginePath = config.get<string>('enginePath') || undefined;
-
-    try {
-      const res = await client.start(
-        workspaceRoot,
-        storagePath,
-        provider,
-        enginePath
-      );
-      outputChannel.appendLine(
-        `[extension] Engine connected (v${res.engineVersion}), supported languages: ${res.supportedLanguages.join(', ')}`
-      );
-
-      const status = await client.getStatus();
-      statusBar.setReady(status);
-
-      // Start initial background indexing (incremental: skips unchanged files)
-      if (provider.apiKey) {
-        client.startIndexing(false).catch((err) => {
-          outputChannel.appendLine(`[extension] Auto-indexing failed: ${err.message}`);
-        });
-      } else {
-        outputChannel.appendLine(
-          '[extension] API key not configured yet. Configure semanticNavigator.apiKey to enable indexing.'
-        );
-      }
-    } catch (err: any) {
-      outputChannel.appendLine(`[extension] Engine initialization failed: ${err.message}`);
+    // Explicit opt-in protects source code from being sent on first activation.
+    indexingEnabled = config.get('enabled', false) && vscode.workspace.isTrusted;
+    if (!indexingEnabled) {
+      status.setIdle();
+      output.appendLine('Configure your provider and enable semanticNavigator.enabled in a trusted workspace to index source code.');
+      return;
     }
-  }
-
-  const quickPickSearch = new QuickPickSearch(client);
-
-  // Command: Semantic Search (Cmd/Ctrl+Alt+F)
-  context.subscriptions.push(
+    try {
+      await engine.start(root.uri.fsPath, (context.storageUri ?? context.globalStorageUri).fsPath, provider, config.get('enginePath', ''));
+      status.setReady(await engine.getStatus());
+      await engine.startIndexing(false);
+    } catch (error) { await report(error); }
+  };
+  const restart = () => { restarting = restarting.then(start).catch(report); };
+  const schedule = (uri: vscode.Uri) => {
+    const ignored = new Set(['.git', 'bin', 'obj', 'node_modules', 'dist', 'out', '.vs', '.idea']);
+    if (vscode.workspace.asRelativePath(uri, false).split(/[\\/]/).some(part => ignored.has(part))) { return; }
+    if (timer) { clearTimeout(timer); }
+    timer = setTimeout(() => {
+      if (indexingEnabled && engine.isRunning()) { void engine.startIndexing(false).catch(report); }
+    }, 600);
+  };
+  const watcher = vscode.workspace.createFileSystemWatcher('**/*');
+  context.subscriptions.push(output, status, view, watcher,
+    watcher.onDidCreate(schedule), watcher.onDidChange(schedule), watcher.onDidDelete(schedule),
+    engine.onProgress(progress => {
+      status.updateProgress(progress);
+      if (progress.phase === 'error') { output.appendLine(progress.message); }
+    }),
+    vscode.workspace.onDidChangeConfiguration(event => { if (event.affectsConfiguration('semanticNavigator')) { restart(); } }),
+    vscode.workspace.onDidChangeWorkspaceFolders(restart),
+    vscode.workspace.onDidGrantWorkspaceTrust(restart),
     vscode.commands.registerCommand('semanticNavigator.search', async () => {
-      if (!client || !client.isRunning()) {
-        const action = await vscode.window.showErrorMessage(
-          'Semantic Navigator engine is not running.',
-          'Open Output Log'
-        );
-        if (action === 'Open Output Log') {
-          outputChannel.show();
-        }
+      if (!engine.isRunning()) {
+        await report(new Error('Engine is unavailable. Configure provider URL/model, enable semanticNavigator.enabled, and check enginePath in settings.'));
         return;
       }
-
-      quickPickSearch.show((selectedMatch) => {
-        resultsProvider.setResults('Recent Search', [selectedMatch]);
-      });
-    })
-  );
-
-  // Command: Reindex Workspace
-  context.subscriptions.push(
+      quickPick.show((query, matches) => { results.setResults(query, matches); view.description = query; });
+    }),
     vscode.commands.registerCommand('semanticNavigator.indexWorkspace', async () => {
-      if (!client || !client.isRunning()) {
-        vscode.window.showErrorMessage('Semantic Navigator engine is not running');
+      if (!engine.isRunning()) {
+        await report(new Error('Configure provider URL/model and enable semanticNavigator.enabled in a trusted workspace first.'));
         return;
       }
-
-      const config = vscode.workspace.getConfiguration('semanticNavigator');
-      const apiKey = config.get<string>('apiKey');
-      if (!apiKey) {
-        const action = await vscode.window.showWarningMessage(
-          'API key is required for embeddings. Please configure semanticNavigator.apiKey in settings.',
-          'Open Settings'
-        );
-        if (action === 'Open Settings') {
-          vscode.commands.executeCommand(
-            'workbench.action.openSettings',
-            'semanticNavigator.apiKey'
-          );
-        }
-        return;
-      }
-
-      try {
-        await client.startIndexing(true);
-        vscode.window.showInformationMessage('Semantic Navigator: Indexing started in background');
-      } catch (err: any) {
-        vscode.window.showErrorMessage(`Indexing failed: ${err.message}`);
-      }
-    })
+      try { await engine.startIndexing(true); } catch (error) { await report(error); }
+    }),
+    { dispose: () => { disposed = true; if (timer) { clearTimeout(timer); } quickPick.dispose(); void engine.stop(); } }
   );
-
-  context.subscriptions.push(outputChannel);
-  context.subscriptions.push(statusBar);
+  restart();
+  await restarting;
+  // Small read-only API also used by the isolated Extension Host smoke test.
+  return { getStatus: () => engine.getStatus(), search: (query: string) => engine.search(query) };
 }
 
-export async function deactivate() {
-  if (client) {
-    await client.stop();
-    client = null;
-  }
-  if (statusBar) {
-    statusBar.dispose();
-    statusBar = null;
-  }
-}
+export async function deactivate() { await client?.stop(); client = undefined; }

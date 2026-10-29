@@ -37,8 +37,10 @@ type Server struct {
 	chunker  chunker.Chunker
 	searcher *search.HybridSearcher
 
-	indexingMu sync.Mutex
-	isIndexing bool
+	indexingMu  sync.Mutex
+	isIndexing  bool
+	indexQueued bool
+	forceQueued bool
 
 	outMu  sync.Mutex
 	writer io.Writer
@@ -110,6 +112,11 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 	}
 
 	s.mu.Lock()
+	if s.initialized {
+		s.mu.Unlock()
+		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeInvalidRequest, "Already initialized; restart the engine to change configuration", nil))
+		return
+	}
 	s.workspaceDir = params.WorkspacePath
 
 	// Open or create SQLite storage in workspace storage directory
@@ -128,8 +135,19 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 	// Initialize OpenAI-compatible embedding provider
 	prov, err := provider.NewOpenAIProvider(params.Provider)
 	if err != nil {
+		store.Close()
+		s.storage = nil
 		s.mu.Unlock()
 		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeProviderError, "Failed to initialize embedding provider: "+err.Error(), nil))
+		return
+	}
+	// Include workspace, endpoint, model and chunking version, never credentials.
+	fingerprint := hashBytes([]byte(params.WorkspacePath + "\n" + strings.TrimRight(params.Provider.BaseURL, "/") + "\n" + prov.Model() + "\nchunker-v2"))
+	if err := store.EnsureFingerprint(fingerprint); err != nil {
+		store.Close()
+		s.storage = nil
+		s.mu.Unlock()
+		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeStorageError, err.Error(), nil))
 		return
 	}
 	s.provider = prov
@@ -162,10 +180,12 @@ func (s *Server) handleIndexStart(req *protocol.Request) {
 
 	s.indexingMu.Lock()
 	if s.isIndexing {
+		s.indexQueued = true
+		s.forceQueued = s.forceQueued || params.ForceReindex
 		s.indexingMu.Unlock()
 		s.sendResponse(protocol.NewResponse(req.ID, protocol.IndexResult{
-			Status:  "already_running",
-			Message: "Indexing is already in progress in background",
+			Status:  "queued",
+			Message: "A follow-up indexing pass is queued",
 		}))
 		return
 	}
@@ -179,15 +199,36 @@ func (s *Server) handleIndexStart(req *protocol.Request) {
 	}))
 
 	// Execute background indexing
-	go s.runIndexing(params.ForceReindex)
+	go s.indexLoop(params.ForceReindex)
+}
+
+// Only one writer runs; events during a pass coalesce into one follow-up pass.
+func (s *Server) indexLoop(force bool) {
+	for {
+		s.runIndexing(force)
+		s.indexingMu.Lock()
+		if !s.indexQueued {
+			s.isIndexing = false
+			s.indexingMu.Unlock()
+			return
+		}
+		force = s.forceQueued
+		s.indexQueued, s.forceQueued = false, false
+		s.indexingMu.Unlock()
+	}
+}
+
+func (s *Server) indexError(err error) {
+	s.mu.Lock()
+	s.state, s.lastError = "error", err.Error()
+	s.mu.Unlock()
+	s.SendNotification("index/progress", protocol.IndexProgressParams{Phase: "error", Message: err.Error()})
 }
 
 func (s *Server) runIndexing(forceReindex bool) {
-	defer func() {
-		s.indexingMu.Lock()
-		s.isIndexing = false
-		s.indexingMu.Unlock()
-	}()
+	s.mu.Lock()
+	s.state, s.lastError = "indexing", ""
+	s.mu.Unlock()
 
 	s.logger.Printf("Starting indexing for workspace: %s", s.workspaceDir)
 	s.SendNotification("index/progress", protocol.IndexProgressParams{
@@ -205,9 +246,9 @@ func (s *Server) runIndexing(forceReindex bool) {
 		".cs": true, ".ts": true, ".js": true, ".tsx": true, ".jsx": true, ".go": true, ".py": true,
 	}
 
-	_ = filepath.Walk(s.workspaceDir, func(path string, info os.FileInfo, err error) error {
+	walkErr := filepath.Walk(s.workspaceDir, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			return nil
+			return err
 		}
 		if info.IsDir() {
 			if ignoreDirs[info.Name()] {
@@ -217,20 +258,61 @@ func (s *Server) runIndexing(forceReindex bool) {
 		}
 
 		ext := strings.ToLower(filepath.Ext(path))
-		if supportedExts[ext] {
+		if supportedExts[ext] && info.Mode().IsRegular() {
 			eligibleFiles = append(eligibleFiles, path)
 		}
 		return nil
 	})
 
 	totalFiles := len(eligibleFiles)
-	if totalFiles == 0 {
-		s.SendNotification("index/progress", protocol.IndexProgressParams{
-			Phase:      "done",
-			Percentage: 100,
-			Message:    "No source files found to index",
-		})
+	if walkErr != nil {
+		s.indexError(fmt.Errorf("scan failed: %w", walkErr))
 		return
+	}
+	if forceReindex {
+		if err := s.storage.SetMetadata("dimension", ""); err != nil {
+			s.indexError(err)
+			return
+		}
+		paths, err := s.storage.ListFiles()
+		if err != nil {
+			s.indexError(err)
+			return
+		}
+		for _, path := range paths {
+			if err := s.storage.DeleteFile(path); err != nil {
+				s.indexError(err)
+				return
+			}
+		}
+	}
+	live := make(map[string]bool, len(eligibleFiles))
+	for _, path := range eligibleFiles {
+		live[path] = true
+	}
+	previousFiles, err := s.storage.ListFiles()
+	if err != nil {
+		s.indexError(err)
+		return
+	}
+	for _, path := range previousFiles {
+		if !live[path] {
+			if err := s.storage.DeleteFile(path); err != nil {
+				s.indexError(err)
+				return
+			}
+		}
+	}
+	oldChunks, err := s.storage.GetAllChunks()
+	if err != nil {
+		s.indexError(err)
+		return
+	}
+	cache := make(map[string][]float32)
+	if !forceReindex {
+		for _, c := range oldChunks {
+			cache[c.ChunkHash] = c.Embedding
+		}
 	}
 
 	s.logger.Printf("Found %d eligible code files", totalFiles)
@@ -239,12 +321,17 @@ func (s *Server) runIndexing(forceReindex bool) {
 	for idx, filePath := range eligibleFiles {
 		content, err := os.ReadFile(filePath)
 		if err != nil {
-			continue
+			s.indexError(fmt.Errorf("read %s: %w", filePath, err))
+			return
 		}
 
 		fileHash := hashBytes(content)
 		if !forceReindex {
-			existingHash, _ := s.storage.GetFileHash(filePath)
+			existingHash, err := s.storage.GetFileHash(filePath)
+			if err != nil {
+				s.indexError(err)
+				return
+			}
 			if existingHash == fileHash {
 				processedFiles++
 				continue // Skip unchanged file (incremental indexing)
@@ -262,30 +349,44 @@ func (s *Server) runIndexing(forceReindex bool) {
 		})
 
 		codeChunks, err := s.chunker.ChunkFile(filePath, content)
-		if err != nil || len(codeChunks) == 0 {
-			_ = s.storage.UpsertFile(filePath, fileHash)
-			processedFiles++
-			continue
-		}
-
-		// Prepare texts for embedding
-		texts := make([]string, len(codeChunks))
-		for i, c := range codeChunks {
-			texts[i] = c.Content
-		}
-
-		// Request embeddings from provider
-		ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
-		embeddings, err := s.provider.EmbedStrings(ctx, texts)
-		cancel()
-
 		if err != nil {
-			s.logger.Printf("Embedding error for %s: %v", relPath, err)
-			s.SendNotification("index/progress", protocol.IndexProgressParams{
-				Phase:   "error",
-				Message: fmt.Sprintf("Provider error on %s: %v", relPath, err),
-			})
+			s.indexError(err)
 			return
+		}
+		texts := []string{}
+		missing := []int{}
+		embeddings := make([][]float32, len(codeChunks))
+		for i, c := range codeChunks {
+			// Hash the actual model input, including documentation and context.
+			codeChunks[i].ChunkHash = hashBytes([]byte(c.Content))
+			if emb := cache[codeChunks[i].ChunkHash]; len(emb) > 0 {
+				embeddings[i] = emb
+			} else {
+				texts = append(texts, c.Content)
+				missing = append(missing, i)
+			}
+		}
+		if len(texts) > 0 {
+			ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+			fresh, err := s.provider.EmbedStrings(ctx, texts)
+			cancel()
+			if err != nil {
+				s.indexError(fmt.Errorf("provider error on %s: %w", relPath, err))
+				return
+			}
+			if len(fresh) != len(missing) {
+				s.indexError(fmt.Errorf("provider returned incorrect embedding count"))
+				return
+			}
+			for j, i := range missing {
+				embeddings[i] = fresh[j]
+			}
+		}
+		for _, emb := range embeddings {
+			if err := s.validateDimension(emb); err != nil {
+				s.indexError(err)
+				return
+			}
 		}
 
 		// Prepare storage chunks
@@ -303,10 +404,10 @@ func (s *Server) runIndexing(forceReindex bool) {
 			}
 		}
 
-		if err := s.storage.SaveChunks(filePath, storageChunks); err != nil {
-			s.logger.Printf("Failed to save chunks for %s: %v", relPath, err)
+		if err := s.storage.ReplaceFile(filePath, fileHash, storageChunks); err != nil {
+			s.indexError(fmt.Errorf("save %s: %w", relPath, err))
+			return
 		}
-		_ = s.storage.UpsertFile(filePath, fileHash)
 		processedFiles++
 
 		s.SendNotification("index/progress", protocol.IndexProgressParams{
@@ -319,6 +420,9 @@ func (s *Server) runIndexing(forceReindex bool) {
 		})
 	}
 
+	s.mu.Lock()
+	s.state, s.lastError = "ready", ""
+	s.mu.Unlock()
 	filesCount, chunksCount, _ := s.storage.GetStats()
 	s.SendNotification("index/progress", protocol.IndexProgressParams{
 		Phase:           "done",
@@ -363,6 +467,15 @@ func (s *Server) handleSearch(req *protocol.Request) {
 
 	start := time.Now()
 
+	allChunks, err := s.storage.GetAllChunks()
+	if err != nil {
+		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeStorageError, err.Error(), nil))
+		return
+	}
+	if len(allChunks) == 0 {
+		s.sendResponse(protocol.NewResponse(req.ID, protocol.SearchResult{Query: query, Matches: []protocol.SearchMatch{}}))
+		return
+	}
 	// 1. Get embedding for the search query (multilingual model handles cross-lingual alignment)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	queryEmbeddings, err := s.provider.EmbedStrings(ctx, []string{query})
@@ -378,11 +491,11 @@ func (s *Server) handleSearch(req *protocol.Request) {
 		return
 	}
 
-	// 2. Retrieve all indexed chunks from storage
-	allChunks, err := s.storage.GetAllChunks()
-	if err != nil {
-		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeStorageError, "Failed to load chunks: "+err.Error(), nil))
-		return
+	for _, c := range allChunks {
+		if len(c.Embedding) != len(queryEmbeddings[0]) {
+			s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeProviderError, "Embedding dimension differs from stored vectors; run Reindex Workspace", nil))
+			return
+		}
 	}
 
 	// 3. Query native SQLite FTS5 for BM25 lexical matches
@@ -395,7 +508,7 @@ func (s *Server) handleSearch(req *protocol.Request) {
 	// 4. Perform Hybrid Search with RRF combining dense vectors and SQLite BM25
 	scored := s.searcher.SearchRRF(allChunks, queryEmbeddings[0], bm25Ranks, topK)
 
-	var matches []protocol.SearchMatch
+	matches := []protocol.SearchMatch{}
 	for _, sc := range scored {
 		relPath, _ := filepath.Rel(s.workspaceDir, sc.Chunk.FilePath)
 		if relPath == "" {
@@ -445,6 +558,21 @@ func (s *Server) handleStatus(req *protocol.Request) {
 		LastError:     lastErr,
 	}
 	s.sendResponse(protocol.NewResponse(req.ID, st))
+}
+
+func (s *Server) validateDimension(vector []float32) error {
+	if len(vector) == 0 {
+		return fmt.Errorf("provider returned empty embedding")
+	}
+	dimension := fmt.Sprint(len(vector))
+	previous, err := s.storage.GetMetadata("dimension")
+	if err != nil {
+		return err
+	}
+	if previous != "" && previous != dimension {
+		return fmt.Errorf("embedding dimension changed (%s to %s); run Reindex Workspace", previous, dimension)
+	}
+	return s.storage.SetMetadata("dimension", dimension)
 }
 
 func hashBytes(data []byte) string {

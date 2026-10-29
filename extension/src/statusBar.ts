@@ -22,6 +22,7 @@ export class StatusBarManager {
 
   public updateProgress(progress: IndexProgressParams) {
     if (progress.phase === 'done') {
+      this.item.command = 'semanticNavigator.search';
       this.item.text = `$(check) Index ready (${progress.totalChunks} chunks)`;
       this.item.tooltip = `Semantic Navigator: Indexed ${progress.totalFiles} files, ${progress.totalChunks} chunks`;
       this.item.backgroundColor = undefined;
@@ -29,8 +30,9 @@ export class StatusBarManager {
     }
 
     if (progress.phase === 'error') {
+      this.item.command = { command: 'workbench.action.openSettings', title: 'Configure Semantic Navigator', arguments: ['semanticNavigator'] };
       this.item.text = '$(error) Index error';
-      this.item.tooltip = `Semantic Navigator error: ${progress.message}`;
+      this.item.tooltip = `Semantic Navigator error: ${progress.message}\nClick to configure provider; then run Reindex Workspace.`;
       this.item.backgroundColor = new vscode.ThemeColor(
         'statusBarItem.warningBackground'
       );

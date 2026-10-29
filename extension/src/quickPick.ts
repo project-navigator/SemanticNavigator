@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 import { EngineClient } from './engineClient';
-import { SearchMatch } from './types';
+import { SearchMatch, SearchResult } from './types';
 
 interface SearchQuickPickItem extends vscode.QuickPickItem {
   match: SearchMatch;
@@ -9,26 +9,35 @@ interface SearchQuickPickItem extends vscode.QuickPickItem {
 export class QuickPickSearch {
   private client: EngineClient;
   private debounceTimer: NodeJS.Timeout | null = null;
-  private currentQuery = '';
+  private inFlight?: Promise<SearchResult>;
+  private active?: vscode.QuickPick<SearchQuickPickItem>;
 
   constructor(client: EngineClient) {
     this.client = client;
   }
 
-  public show(onResultSelected?: (match: SearchMatch) => void) {
+  public dispose() { this.active?.hide(); }
+
+  public show(onResults?: (query: string, matches: SearchMatch[]) => void) {
+    this.active?.hide();
+    let generation = 0;
+    let closed = false;
     const quickPick = vscode.window.createQuickPick<SearchQuickPickItem>();
     quickPick.placeholder =
       'Type to search code semantically (e.g. "авторизация по токену" or "validate invoice amount")...';
-    quickPick.matchOnDescription = true;
-    quickPick.matchOnDetail = true;
+    this.active = quickPick;
+    quickPick.matchOnDescription = false;
+    quickPick.matchOnDetail = false;
 
     quickPick.onDidChangeValue((value) => {
-      this.currentQuery = value.trim();
+      const query = value.trim();
+      const requestGeneration = ++generation;
+      quickPick.items = [];
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
       }
 
-      if (!this.currentQuery) {
+      if (!query) {
         quickPick.items = [];
         quickPick.busy = false;
         return;
@@ -37,11 +46,18 @@ export class QuickPickSearch {
       quickPick.busy = true;
       this.debounceTimer = setTimeout(async () => {
         try {
-          const res = await this.client.search(this.currentQuery, 15);
+          if (this.inFlight) { await this.inFlight.catch(() => undefined); }
+          if (closed || requestGeneration !== generation) { return; }
+          const request = this.client.search(query, 15);
+          this.inFlight = request;
+          let res: SearchResult;
+          try { res = await request; } finally { if (this.inFlight === request) { this.inFlight = undefined; } }
+          if (closed || requestGeneration !== generation) { return; }
+          onResults?.(query, res.matches);
           quickPick.busy = false;
 
           if (res.matches.length === 0) {
-            quickPick.items = [];
+            quickPick.items = [{ label: '$(info) No indexed matches', alwaysShow: true, description: 'Run Reindex Workspace or check Output: Semantic Navigator', match: {} as SearchMatch }];
             return;
           }
 
@@ -51,6 +67,7 @@ export class QuickPickSearch {
             const preview = cleanSnippetPreview(m.snippet);
 
             return {
+              alwaysShow: true,
               label: `${icon} ${title}`,
               description: `${m.relativePath}:${m.startLine}-${m.endLine}  •  ${m.matchReason || 'match'}`,
               detail: preview,
@@ -58,12 +75,14 @@ export class QuickPickSearch {
             };
           });
         } catch (err: any) {
+          if (closed || requestGeneration !== generation) { return; }
           quickPick.busy = false;
           quickPick.items = [
             {
+              alwaysShow: true,
               label: '$(error) Search failed',
               description: err.message,
-              detail: 'Check API key and provider configuration in settings',
+              detail: 'Check provider URL/model/key, quota and network. Reindex or reload window after fixing. See Output: Semantic Navigator.',
               match: {} as any,
             },
           ];
@@ -74,7 +93,8 @@ export class QuickPickSearch {
     // Instant preview on arrow key navigation
     quickPick.onDidChangeActive(async (activeItems) => {
       if (activeItems.length > 0 && activeItems[0].match.filePath) {
-        await this.previewMatch(activeItems[0].match, true);
+        const match = activeItems[0].match;
+        await this.previewMatch(match, true, () => !closed && quickPick.activeItems[0]?.match === match);
       }
     });
 
@@ -84,13 +104,13 @@ export class QuickPickSearch {
       if (selected && selected.match.filePath) {
         quickPick.hide();
         await this.previewMatch(selected.match, false);
-        if (onResultSelected) {
-          onResultSelected(selected.match);
-        }
       }
     });
 
     quickPick.onDidHide(() => {
+      closed = true;
+      generation++;
+      if (this.active === quickPick) { this.active = undefined; }
       if (this.debounceTimer) {
         clearTimeout(this.debounceTimer);
       }
@@ -100,9 +120,10 @@ export class QuickPickSearch {
     quickPick.show();
   }
 
-  private async previewMatch(match: SearchMatch, preserveFocus: boolean) {
+  private async previewMatch(match: SearchMatch, preserveFocus: boolean, isCurrent = () => true) {
     try {
       const doc = await vscode.workspace.openTextDocument(match.filePath);
+      if (!isCurrent()) { return; }
       const startPos = new vscode.Position(
         Math.max(0, match.startLine - 1),
         0

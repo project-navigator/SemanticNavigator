@@ -4,8 +4,10 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
 	"net/http"
+	"strings"
 	"testing"
 
 	"semantic-navigator/engine/internal/protocol"
@@ -103,4 +105,56 @@ func TestOpenAIProvider_ErrorHandling(t *testing.T) {
 	}
 
 	t.Logf("Received expected error: %v", err)
+}
+
+func TestOptionalKeyAndProviderResponseValidation(t *testing.T) {
+	cases := []struct {
+		name, body string
+		status     int
+		wantError  string
+	}{
+		{"no key", `{"data":[{"index":0,"embedding":[1,2]}]}`, 200, ""},
+		{"unauthorized", `{}`, 401, "apiKey"},
+		{"forbidden", `{}`, 403, "permissions"},
+		{"rate limited", `{}`, 429, "quota"},
+		{"unavailable", `{}`, 503, "URL"},
+		{"empty vector", `{"data":[{"index":0,"embedding":[]}]}`, 200, "empty"},
+		{"zero vector", `{"data":[{"index":0,"embedding":[0,0]}]}`, 200, "zero"},
+		{"invalid index", `{"data":[{"index":1,"embedding":[1,2]}]}`, 200, "index"},
+		{"wrong count", `{"data":[]}`, 200, "expected"},
+		{"malformed", `not json`, 200, "parse"},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			p, _ := NewOpenAIProvider(protocol.ProviderConfig{BaseURL: "http://mock.local/v1"})
+			p.SetTransport(roundTripFunc(func(req *http.Request) *http.Response {
+				if req.Header.Get("Authorization") != "" {
+					t.Error("empty API key sent as Authorization")
+				}
+				return &http.Response{StatusCode: tc.status, Body: io.NopCloser(strings.NewReader(tc.body)), Header: make(http.Header)}
+			}))
+			_, err := p.EmbedStrings(context.Background(), []string{"test"})
+			if tc.wantError == "" {
+				if err != nil {
+					t.Fatal(err)
+				}
+			} else if err == nil || !strings.Contains(err.Error(), tc.wantError) {
+				t.Fatalf("expected %q, got %v", tc.wantError, err)
+			}
+		})
+	}
+}
+
+type errorTransport struct{ err error }
+
+func (rt errorTransport) RoundTrip(req *http.Request) (*http.Response, error) { return nil, rt.err }
+func TestNetworkAndTimeoutErrors(t *testing.T) {
+	for _, failure := range []error{errors.New("network offline"), context.DeadlineExceeded} {
+		p, _ := NewOpenAIProvider(protocol.ProviderConfig{BaseURL: "http://mock.local/v1"})
+		p.SetTransport(errorTransport{failure})
+		_, err := p.EmbedStrings(context.Background(), []string{"query"})
+		if !errors.Is(err, failure) {
+			t.Fatalf("error cause lost: %v", err)
+		}
+	}
 }

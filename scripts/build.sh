@@ -1,17 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-
-echo "=== [1/2] Building Go search engine ==="
 cd "$ROOT_DIR/engine"
-mkdir -p bin
-go build -o bin/semantic-engine ./cmd/engine
-echo "✓ Engine built successfully: engine/bin/semantic-engine"
-
-echo "=== [2/2] Compiling TypeScript extension ==="
+mkdir -p bin "$ROOT_DIR/extension/bin"
+ENGINE_NAME=semantic-engine
+if [[ "$(go env GOOS)" == windows ]]; then ENGINE_NAME=semantic-engine.exe; fi
+CGO_ENABLED=0 go build -trimpath -o "bin/$ENGINE_NAME" ./cmd/engine
+cp "bin/$ENGINE_NAME" "$ROOT_DIR/extension/bin/$ENGINE_NAME"
 cd "$ROOT_DIR/extension"
+npm ci
 npm run compile
-echo "✓ Extension compiled successfully: extension/out/"
-
-echo "=== All components built successfully! ==="

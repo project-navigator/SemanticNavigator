@@ -17,6 +17,7 @@ import {
 interface PendingRequest {
   resolve: (value: any) => void;
   reject: (reason?: any) => void;
+  timer: NodeJS.Timeout;
 }
 
 export class EngineClient {
@@ -58,13 +59,14 @@ export class EngineClient {
       env: { ...process.env },
     });
 
+    const child = this.process;
     const rl = readline.createInterface({
       input: this.process.stdout,
       terminal: false,
     });
 
     rl.on('line', (line) => {
-      this.handleStdoutLine(line);
+      if (this.process === child) { this.handleStdoutLine(line); }
     });
 
     this.process.stderr.on('data', (data) => {
@@ -73,15 +75,18 @@ export class EngineClient {
 
     this.process.on('error', (err) => {
       this.outputChannel.appendLine(`[client] Engine process error: ${err.message}`);
-      this.rejectAllPending(err);
+      if (this.process === child) { this.rejectAllPending(err); this.process = null; }
     });
 
     this.process.on('exit', (code, signal) => {
       this.outputChannel.appendLine(
         `[client] Engine process exited with code ${code}, signal ${signal}`
       );
-      this.rejectAllPending(new Error(`Engine exited with code ${code}`));
-      this.process = null;
+      rl.close();
+      if (this.process === child) {
+        this.rejectAllPending(new Error(`Engine exited with code ${code}. Reload the window; check enginePath and Output.`));
+        this.process = null;
+      }
     });
 
     // Send initialize request
@@ -113,17 +118,14 @@ export class EngineClient {
       return;
     }
 
-    try {
-      await this.sendRequest('shutdown', {});
-    } catch {
-      // Process might already be terminating
-    }
-
-    if (this.process) {
-      this.process.kill();
-      this.process = null;
-    }
-    this.pendingRequests.clear();
+    const child = this.process;
+    this.process = null;
+    this.rejectAllPending(new Error('Engine stopped or configuration changed'));
+    await new Promise<void>(resolve => {
+      child.once('exit', () => { clearTimeout(timer); resolve(); });
+      const timer = setTimeout(() => { child.kill('SIGKILL'); resolve(); }, 1500);
+      child.kill();
+    });
   }
 
   public onProgress(listener: (p: IndexProgressParams) => void): vscode.Disposable {
@@ -149,10 +151,15 @@ export class EngineClient {
     };
 
     return new Promise<T>((resolve, reject) => {
-      this.pendingRequests.set(id, { resolve, reject });
+      const timer = setTimeout(() => {
+        this.pendingRequests.delete(id);
+        reject(new Error(`Engine request ${method} timed out. Check provider/network and reload the window if the engine is unresponsive.`));
+      }, method === 'search' ? 25000 : 10000);
+      this.pendingRequests.set(id, { resolve, reject, timer });
       const jsonLine = JSON.stringify(payload) + '\n';
       this.process!.stdin.write(jsonLine, (err) => {
         if (err) {
+          clearTimeout(timer);
           this.pendingRequests.delete(id);
           reject(err);
         }
@@ -181,6 +188,7 @@ export class EngineClient {
       // Request response
       const pending = this.pendingRequests.get(msg.id);
       if (pending) {
+        clearTimeout(pending.timer);
         this.pendingRequests.delete(msg.id);
         if (msg.error) {
           pending.reject(new Error(msg.error.message || `RPC Error ${msg.error.code}`));
@@ -195,20 +203,22 @@ export class EngineClient {
 
   private rejectAllPending(err: Error): void {
     for (const [id, req] of this.pendingRequests.entries()) {
+      clearTimeout(req.timer);
       req.reject(err);
     }
     this.pendingRequests.clear();
   }
 
   private resolveBinaryPath(workspacePath: string, customPath?: string): string | null {
-    if (customPath && fs.existsSync(customPath)) {
+    if (customPath) {
+      if (!fs.existsSync(customPath)) { throw new Error('Configured enginePath does not exist. Fix semanticNavigator.enginePath.'); }
       return customPath;
     }
-
+    const name = process.platform === 'win32' ? 'semantic-engine.exe' : 'semantic-engine';
+    // Never execute a binary supplied by the searched workspace.
     const candidates = [
-      path.join(workspacePath, 'engine', 'bin', 'semantic-engine'),
-      path.join(workspacePath, 'bin', 'semantic-engine'),
-      path.join(__dirname, '..', '..', 'engine', 'bin', 'semantic-engine'),
+      path.join(__dirname, '..', 'bin', name),
+      path.join(__dirname, '..', '..', 'engine', 'bin', name),
     ];
 
     for (const candidate of candidates) {

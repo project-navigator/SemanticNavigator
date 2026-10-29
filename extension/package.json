@@ -40,7 +40,7 @@
         {
           "id": "semantic-navigator",
           "title": "Semantic Navigator",
-          "icon": "$(search)"
+          "icon": "media/search.svg"
         }
       ]
     },
@@ -74,17 +74,42 @@
           "type": "string",
           "default": "",
           "description": "Optional path to the custom semantic-engine binary"
+        },
+        "semanticNavigator.enabled": {
+          "type": "boolean",
+          "default": false,
+          "scope": "resource",
+          "description": "Enable indexing and search with the configured provider. Source code will be sent to that provider."
         }
       }
     }
   },
   "scripts": {
     "compile": "tsc -p ./",
-    "watch": "tsc -watch -p ./"
+    "watch": "tsc -watch -p ./",
+    "test": "npm run compile && node --test test/*.test.cjs",
+    "package": "../scripts/package.sh"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
+    "@vscode/vsce": "3.9.2",
     "typescript": "^5.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/project-navigator/SemanticNavigator.git"
+  },
+  "license": "MIT",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": false,
+      "description": "Indexing launches a local engine and sends source code to the configured provider."
+    },
+    "virtualWorkspaces": false
+  },
+  "overrides": {
+    "@azure/identity": "4.13.0",
+    "uuid": "11.1.1"
   }
 }

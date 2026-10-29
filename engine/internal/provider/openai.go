@@ -6,7 +6,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
@@ -34,6 +36,10 @@ func NewOpenAIProvider(cfg protocol.ProviderConfig) (*OpenAIProvider, error) {
 	baseURL := strings.TrimRight(cfg.BaseURL, "/")
 	if baseURL == "" {
 		baseURL = "https://api.openai.com/v1"
+	}
+	parsed, err := url.Parse(baseURL)
+	if err != nil || parsed.Host == "" || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.User != nil || parsed.RawQuery != "" || parsed.Fragment != "" {
+		return nil, fmt.Errorf("provider URL must be an http(s) base URL without credentials, query or fragment")
 	}
 	model := cfg.Model
 	if model == "" {
@@ -72,8 +78,8 @@ type openAIEmbeddingResponse struct {
 		Index     int       `json:"index"`
 	} `json:"data"`
 	Error *struct {
-		Message string `json:"message"`
-		Type    string `json:"type"`
+		Message string      `json:"message"`
+		Type    string      `json:"type"`
 		Code    interface{} `json:"code"`
 	} `json:"error,omitempty"`
 }
@@ -135,17 +141,20 @@ func (p *OpenAIProvider) embedBatch(ctx context.Context, batch []string) ([][]fl
 	}
 	defer resp.Body.Close()
 
-	respBytes, err := io.ReadAll(resp.Body)
+	respBytes, err := io.ReadAll(io.LimitReader(resp.Body, 32*1024*1024))
 	if err != nil {
 		return nil, fmt.Errorf("failed to read response body: %w", err)
 	}
 
 	if resp.StatusCode != http.StatusOK {
-		var apiErr openAIEmbeddingResponse
-		if jsonErr := json.Unmarshal(respBytes, &apiErr); jsonErr == nil && apiErr.Error != nil {
-			return nil, fmt.Errorf("provider returned status %d: %s", resp.StatusCode, apiErr.Error.Message)
+		hint := "check provider URL, model and server logs"
+		switch resp.StatusCode {
+		case 401, 403:
+			hint = "check semanticNavigator.apiKey and provider permissions"
+		case 429:
+			hint = "rate limit or quota exceeded; wait, check quota, then retry Reindex Workspace"
 		}
-		return nil, fmt.Errorf("provider returned HTTP %d: %s", resp.StatusCode, string(respBytes))
+		return nil, fmt.Errorf("provider returned HTTP %d: %s", resp.StatusCode, hint)
 	}
 
 	var apiResp openAIEmbeddingResponse
@@ -158,10 +167,31 @@ func (p *OpenAIProvider) embedBatch(ctx context.Context, batch []string) ([][]fl
 	}
 
 	embeddings := make([][]float32, len(batch))
+	seen := make(map[int]bool)
+	dimension := 0
 	for _, item := range apiResp.Data {
-		if item.Index >= 0 && item.Index < len(batch) {
-			embeddings[item.Index] = item.Embedding
+		if item.Index < 0 || item.Index >= len(batch) || seen[item.Index] {
+			return nil, fmt.Errorf("invalid or duplicate embedding index %d", item.Index)
 		}
+		seen[item.Index] = true
+		if len(item.Embedding) == 0 {
+			return nil, fmt.Errorf("provider returned empty embedding")
+		}
+		if dimension != 0 && dimension != len(item.Embedding) {
+			return nil, fmt.Errorf("provider returned inconsistent dimensions")
+		}
+		dimension = len(item.Embedding)
+		var norm float64
+		for _, v := range item.Embedding {
+			if math.IsNaN(float64(v)) || math.IsInf(float64(v), 0) {
+				return nil, fmt.Errorf("provider returned non-finite embedding")
+			}
+			norm += float64(v) * float64(v)
+		}
+		if norm == 0 {
+			return nil, fmt.Errorf("provider returned zero embedding")
+		}
+		embeddings[item.Index] = item.Embedding
 	}
 
 	return embeddings, nil

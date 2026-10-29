@@ -1,0 +1,242 @@
+[
+  {
+    "id": "q01",
+    "kind": "ru",
+    "query": "проверить срок действия токена и наличие в списке разрешённых",
+    "relevant": [
+      "ShopService.cs#ValidateToken"
+    ]
+  },
+  {
+    "id": "q02",
+    "kind": "symbol",
+    "query": "ValidateToken",
+    "relevant": [
+      "ShopService.cs#ValidateToken"
+    ]
+  },
+  {
+    "id": "q03",
+    "kind": "ru",
+    "query": "хеширование пароля с солью",
+    "relevant": [
+      "ShopService.cs#HashPassword"
+    ]
+  },
+  {
+    "id": "q04",
+    "kind": "symbol",
+    "query": "HashPassword",
+    "relevant": [
+      "ShopService.cs#HashPassword"
+    ]
+  },
+  {
+    "id": "q05",
+    "kind": "ru",
+    "query": "посчитать стоимость счёта со скидкой",
+    "relevant": [
+      "ShopService.cs#CalculateInvoiceTotal"
+    ]
+  },
+  {
+    "id": "q06",
+    "kind": "symbol",
+    "query": "CalculateInvoiceTotal",
+    "relevant": [
+      "ShopService.cs#CalculateInvoiceTotal"
+    ]
+  },
+  {
+    "id": "q07",
+    "kind": "ru",
+    "query": "перевести рубли в другую валюту",
+    "relevant": [
+      "ShopService.cs#ConvertCurrency"
+    ]
+  },
+  {
+    "id": "q08",
+    "kind": "symbol",
+    "query": "ConvertCurrency",
+    "relevant": [
+      "ShopService.cs#ConvertCurrency"
+    ]
+  },
+  {
+    "id": "q09",
+    "kind": "ru",
+    "query": "зарезервировать товар на складе если его хватает",
+    "relevant": [
+      "ShopService.cs#ReserveStock"
+    ]
+  },
+  {
+    "id": "q10",
+    "kind": "symbol",
+    "query": "ReserveStock",
+    "relevant": [
+      "ShopService.cs#ReserveStock"
+    ]
+  },
+  {
+    "id": "q11",
+    "kind": "ru",
+    "query": "найти заказы за период между датами",
+    "relevant": [
+      "ShopService.cs#FindOrdersByDate"
+    ]
+  },
+  {
+    "id": "q12",
+    "kind": "symbol",
+    "query": "FindOrdersByDate",
+    "relevant": [
+      "ShopService.cs#FindOrdersByDate"
+    ]
+  },
+  {
+    "id": "q13",
+    "kind": "ru",
+    "query": "показать страницу списка заказов",
+    "relevant": [
+      "ShopService.cs#PaginateOrders"
+    ]
+  },
+  {
+    "id": "q14",
+    "kind": "symbol",
+    "query": "PaginateOrders",
+    "relevant": [
+      "ShopService.cs#PaginateOrders"
+    ]
+  },
+  {
+    "id": "q15",
+    "kind": "ru",
+    "query": "выгрузить заказы в csv с экранированием кавычек",
+    "relevant": [
+      "ShopService.cs#ExportOrdersCsv"
+    ]
+  },
+  {
+    "id": "q16",
+    "kind": "symbol",
+    "query": "ExportOrdersCsv",
+    "relevant": [
+      "ShopService.cs#ExportOrdersCsv"
+    ]
+  },
+  {
+    "id": "q17",
+    "kind": "ru",
+    "query": "убрать повторяющиеся почтовые адреса без учёта регистра",
+    "relevant": [
+      "ShopService.cs#DeduplicateEmails"
+    ]
+  },
+  {
+    "id": "q18",
+    "kind": "symbol",
+    "query": "DeduplicateEmails",
+    "relevant": [
+      "ShopService.cs#DeduplicateEmails"
+    ]
+  },
+  {
+    "id": "q19",
+    "kind": "ru",
+    "query": "повторить неудачный сетевой запрос с задержкой",
+    "relevant": [
+      "ShopService.cs#RetryAsync"
+    ]
+  },
+  {
+    "id": "q20",
+    "kind": "symbol",
+    "query": "RetryAsync",
+    "relevant": [
+      "ShopService.cs#RetryAsync"
+    ]
+  },
+  {
+    "id": "q21",
+    "kind": "ru",
+    "query": "проверить размер и расширение загружаемого файла",
+    "relevant": [
+      "ShopService.cs#ValidateUpload"
+    ]
+  },
+  {
+    "id": "q22",
+    "kind": "symbol",
+    "query": "ValidateUpload",
+    "relevant": [
+      "ShopService.cs#ValidateUpload"
+    ]
+  },
+  {
+    "id": "q23",
+    "kind": "ru",
+    "query": "скрыть номер банковской карты кроме последних четырёх цифр",
+    "relevant": [
+      "ShopService.cs#MaskCardNumber"
+    ]
+  },
+  {
+    "id": "q24",
+    "kind": "symbol",
+    "query": "MaskCardNumber",
+    "relevant": [
+      "ShopService.cs#MaskCardNumber"
+    ]
+  },
+  {
+    "id": "q25",
+    "kind": "en",
+    "query": "reject an expired access token",
+    "relevant": [
+      "ShopService.cs#ValidateToken"
+    ]
+  },
+  {
+    "id": "q26",
+    "kind": "en",
+    "query": "derive a password hash with PBKDF2",
+    "relevant": [
+      "ShopService.cs#HashPassword"
+    ]
+  },
+  {
+    "id": "q27",
+    "kind": "en",
+    "query": "calculate total after discount",
+    "relevant": [
+      "ShopService.cs#CalculateInvoiceTotal"
+    ]
+  },
+  {
+    "id": "q28",
+    "kind": "en",
+    "query": "convert rubles at an exchange rate",
+    "relevant": [
+      "ShopService.cs#ConvertCurrency"
+    ]
+  },
+  {
+    "id": "q29",
+    "kind": "en",
+    "query": "reserve available inventory",
+    "relevant": [
+      "ShopService.cs#ReserveStock"
+    ]
+  },
+  {
+    "id": "q30",
+    "kind": "en",
+    "query": "filter orders by creation date",
+    "relevant": [
+      "ShopService.cs#FindOrdersByDate"
+    ]
+  }
+]

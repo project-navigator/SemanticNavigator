@@ -40,3 +40,9 @@ Thumbs.db
 .idea/
 *.suo
 *.user
+
+# Local evaluation reports (may include provider address)
+evaluation/results.local.json
+__pycache__/
+evaluation/host.local.json
+obj/

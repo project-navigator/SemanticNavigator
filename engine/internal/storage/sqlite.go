@@ -7,6 +7,7 @@ import (
 	"math"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -86,6 +87,15 @@ func (s *Storage) InitSchema() error {
 		key TEXT PRIMARY KEY,
 		value TEXT NOT NULL
 	);
+
+	CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
+		chunk_id UNINDEXED,
+		file_path,
+		symbol_name,
+		context,
+		content,
+		tokenize = 'unicode61'
+	);
 	`
 	_, err := s.db.Exec(schema)
 	return err
@@ -151,6 +161,9 @@ func (s *Storage) DeleteFile(path string) error {
 	}
 	defer tx.Rollback()
 
+	if _, err := tx.Exec("DELETE FROM chunks_fts WHERE file_path = ?", path); err != nil {
+		return err
+	}
 	if _, err := tx.Exec("DELETE FROM chunks WHERE file_path = ?", path); err != nil {
 		return err
 	}
@@ -161,7 +174,70 @@ func (s *Storage) DeleteFile(path string) error {
 	return tx.Commit()
 }
 
-// SaveChunks replaces chunks for a given file.
+// BM25Match represents a lexical match from SQLite FTS5.
+type BM25Match struct {
+	ChunkID   int64
+	BM25Score float64 // SQLite FTS5 bm25 score (smaller is better)
+}
+
+// SearchBM25 performs native SQLite FTS5 BM25 lexical search with column weighting.
+// Column weights: symbol_name=10.0, context=5.0, content=1.0.
+func (s *Storage) SearchBM25(query string, topK int) ([]BM25Match, error) {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	if topK <= 0 {
+		topK = 20
+	}
+
+	// Escape FTS5 special characters and build search phrase
+	safeQuery := sanitizeFTS5Query(query)
+	if safeQuery == "" {
+		return nil, nil
+	}
+
+	sqlQuery := `
+		SELECT chunk_id, bm25(chunks_fts, 10.0, 5.0, 1.0) as score
+		FROM chunks_fts
+		WHERE chunks_fts MATCH ?
+		ORDER BY score ASC
+		LIMIT ?
+	`
+	rows, err := s.db.Query(sqlQuery, safeQuery, topK)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var matches []BM25Match
+	for rows.Next() {
+		var m BM25Match
+		if err := rows.Scan(&m.ChunkID, &m.BM25Score); err != nil {
+			return nil, err
+		}
+		matches = append(matches, m)
+	}
+
+	return matches, rows.Err()
+}
+
+func sanitizeFTS5Query(query string) string {
+	var words []string
+	for _, w := range strings.Fields(query) {
+		clean := strings.Map(func(r rune) rune {
+			if (r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || (r >= 'а' && r <= 'я') || (r >= 'А' && r <= 'Я') || r == '_' {
+				return r
+			}
+			return -1
+		}, w)
+		if len(clean) >= 2 {
+			words = append(words, clean+"*")
+		}
+	}
+	return strings.Join(words, " OR ")
+}
+
+// SaveChunks replaces chunks for a given file in both chunks table and FTS5 index.
 func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -172,7 +248,10 @@ func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 	}
 	defer tx.Rollback()
 
-	// Clear existing chunks for this file
+	// Clear existing chunks and FTS entries for this file
+	if _, err := tx.Exec("DELETE FROM chunks_fts WHERE file_path = ?", filePath); err != nil {
+		return fmt.Errorf("failed to clear old FTS entries: %w", err)
+	}
 	if _, err := tx.Exec("DELETE FROM chunks WHERE file_path = ?", filePath); err != nil {
 		return fmt.Errorf("failed to clear old chunks for %s: %w", filePath, err)
 	}
@@ -186,9 +265,18 @@ func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 	}
 	defer stmt.Close()
 
+	ftsStmt, err := tx.Prepare(`
+		INSERT INTO chunks_fts (chunk_id, file_path, symbol_name, context, content)
+		VALUES (?, ?, ?, ?, ?)
+	`)
+	if err != nil {
+		return fmt.Errorf("prepare insert FTS: %w", err)
+	}
+	defer ftsStmt.Close()
+
 	for _, c := range chunks {
 		embBlob := EncodeFloats(c.Embedding)
-		_, err := stmt.Exec(
+		res, err := stmt.Exec(
 			filePath,
 			c.ChunkHash,
 			c.StartLine,
@@ -200,6 +288,15 @@ func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 		)
 		if err != nil {
 			return fmt.Errorf("insert chunk: %w", err)
+		}
+
+		chunkID, err := res.LastInsertId()
+		if err != nil {
+			return fmt.Errorf("get chunk lastInsertId: %w", err)
+		}
+
+		if _, err := ftsStmt.Exec(chunkID, filePath, c.SymbolName, c.Context, c.Content); err != nil {
+			return fmt.Errorf("insert FTS chunk: %w", err)
 		}
 	}
 

@@ -104,3 +104,57 @@ func TestFloatEncoding(t *testing.T) {
 		}
 	}
 }
+
+func TestFTS5Support(t *testing.T) {
+	tempDir, err := os.MkdirTemp("", "semnav_fts5_*")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tempDir)
+
+	dbPath := filepath.Join(tempDir, "fts.db")
+	store, err := Open(dbPath)
+	if err != nil {
+		t.Fatalf("failed to open storage: %v", err)
+	}
+	defer store.Close()
+
+	chunks := []Chunk{
+		{
+			FilePath:   "src/Auth.cs",
+			ChunkHash:  "h1",
+			StartLine:  1,
+			EndLine:    10,
+			SymbolName: "ValidateToken",
+			Context:    "Kontur.Auth > AuthService",
+			Content:    "public bool ValidateToken(string jwt) { return true; }",
+			Embedding:  []float32{0.1, 0.2},
+		},
+		{
+			FilePath:   "src/Billing.cs",
+			ChunkHash:  "h2",
+			StartLine:  1,
+			EndLine:    15,
+			SymbolName: "ProcessPayment",
+			Context:    "Kontur.Billing > BillingService",
+			Content:    "public void ProcessPayment() {}",
+			Embedding:  []float32{0.3, 0.4},
+		},
+	}
+
+	if err := store.SaveChunks("src/Auth.cs", []Chunk{chunks[0]}); err != nil {
+		t.Fatalf("failed to save auth chunk: %v", err)
+	}
+	if err := store.SaveChunks("src/Billing.cs", []Chunk{chunks[1]}); err != nil {
+		t.Fatalf("failed to save billing chunk: %v", err)
+	}
+
+	matches, err := store.SearchBM25("ValidateToken", 5)
+	if err != nil {
+		t.Fatalf("SearchBM25 failed: %v", err)
+	}
+	if len(matches) == 0 {
+		t.Fatal("expected at least 1 BM25 match for ValidateToken")
+	}
+	t.Logf("Found %d BM25 matches for ValidateToken, top chunk ID=%d, score=%f", len(matches), matches[0].ChunkID, matches[0].BM25Score)
+}

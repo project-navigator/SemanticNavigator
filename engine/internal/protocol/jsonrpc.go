@@ -91,11 +91,10 @@ func NewNotification(method string, params interface{}) *Notification {
 // --- Protocol Messages Payload Definitions ---
 
 type ProviderConfig struct {
-	Type       string `json:"type"`       // "openai-compatible"
-	BaseURL    string `json:"baseUrl"`    // e.g. "https://api.openai.com/v1" or local
-	APIKey     string `json:"apiKey"`     // Bearer token
-	Model      string `json:"model"`      // e.g. "text-embedding-3-small"
-	Dimensions int    `json:"dimensions"` // optional dimensions override
+	Type    string `json:"type"`    // "openai-compatible"
+	BaseURL string `json:"baseUrl"` // e.g. "https://api.openai.com/v1" or local
+	APIKey  string `json:"apiKey"`  // Bearer token
+	Model   string `json:"model"`   // e.g. "text-embedding-3-small"
 }
 
 type InitializeParams struct {
@@ -111,8 +110,7 @@ type InitializeResult struct {
 }
 
 type IndexParams struct {
-	ForceReindex bool     `json:"forceReindex"`
-	Paths        []string `json:"paths,omitempty"`
+	ForceReindex bool `json:"forceReindex"`
 }
 
 type IndexResult struct {
@@ -132,10 +130,8 @@ type IndexProgressParams struct {
 }
 
 type SearchParams struct {
-	Query      string   `json:"query"`
-	TopK       int      `json:"topK"`
-	SearchMode string   `json:"searchMode,omitempty"` // "vector", "lexical", "hybrid"
-	FileFilter []string `json:"fileFilter,omitempty"`
+	Query string `json:"query"`
+	TopK  int    `json:"topK"`
 }
 
 type SearchMatch struct {

@@ -1,6 +1,7 @@
 package chunker
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -120,7 +121,7 @@ namespace Kontur.Security
 	}
 
 	// Doc comment should be embedded in content
-	if !contains(c.Content, "Проверяет срок действия и подпись JWT токена") {
+	if !strings.Contains(c.Content, "Проверяет срок действия и подпись JWT токена") {
 		t.Errorf("expected doc comment in Content, got: %s", c.Content)
 	}
 
@@ -133,17 +134,4 @@ namespace Kontur.Security
 	if len(capped) >= 5000 {
 		t.Errorf("expected truncated content, length is %d", len(capped))
 	}
-}
-
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || len(substr) == 0 || (len(s) > 0 && len(substr) > 0 && index(s, substr) >= 0))
-}
-
-func index(s, substr string) int {
-	for i := 0; i+len(substr) <= len(s); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
 }

@@ -15,14 +15,11 @@ import (
 	"semantic-navigator/engine/internal/protocol"
 )
 
-// EmbeddingProvider is the interface for generating vector embeddings.
 type EmbeddingProvider interface {
 	EmbedStrings(ctx context.Context, texts []string) ([][]float32, error)
 	Model() string
 }
 
-// OpenAIProvider connects to any OpenAI-compatible embeddings endpoint
-// (e.g. OpenAI, Ollama, LM Studio, vLLM, custom corporate gateway).
 type OpenAIProvider struct {
 	baseURL    string
 	apiKey     string
@@ -31,7 +28,6 @@ type OpenAIProvider struct {
 	batchSize  int
 }
 
-// NewOpenAIProvider creates a new provider instance from configuration.
 func NewOpenAIProvider(cfg protocol.ProviderConfig) (*OpenAIProvider, error) {
 	baseURL := strings.TrimRight(cfg.BaseURL, "/")
 	if baseURL == "" {
@@ -57,7 +53,6 @@ func NewOpenAIProvider(cfg protocol.ProviderConfig) (*OpenAIProvider, error) {
 	}, nil
 }
 
-// SetTransport allows injecting a custom RoundTripper (e.g. for testing without network).
 func (p *OpenAIProvider) SetTransport(rt http.RoundTripper) {
 	p.httpClient.Transport = rt
 }
@@ -84,7 +79,6 @@ type openAIEmbeddingResponse struct {
 	} `json:"error,omitempty"`
 }
 
-// EmbedStrings computes embeddings for a list of strings, automatically handling batching.
 func (p *OpenAIProvider) EmbedStrings(ctx context.Context, texts []string) ([][]float32, error) {
 	if len(texts) == 0 {
 		return nil, nil

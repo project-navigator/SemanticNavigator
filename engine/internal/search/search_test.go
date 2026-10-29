@@ -47,7 +47,6 @@ func TestHybridSearch_RRF(t *testing.T) {
 
 	searcher := NewHybridSearcher(DefaultRRFConfig())
 
-	// Simulated BM25 ranks: Chunk 1 matched "ValidateToken", rank 1
 	bm25Ranks := map[int64]int{
 		1: 1,
 	}

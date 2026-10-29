@@ -39,7 +39,6 @@ export class StatusBarManager {
       return;
     }
 
-    // Active indexing phase (scanning, chunking, embedding)
     const pct = Math.round(progress.percentage);
     const fileHint = progress.currentFile ? ` (${progress.currentFile})` : '';
     this.item.text = `$(sync~spin) Indexing: ${pct}%`;

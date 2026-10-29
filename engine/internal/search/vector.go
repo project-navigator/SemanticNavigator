@@ -4,8 +4,6 @@ import (
 	"math"
 )
 
-// CosineSimilarity computes the cosine similarity between two float32 vectors.
-// Returns a value between -1.0 and 1.0 (typically 0.0 to 1.0 for normalized embeddings).
 func CosineSimilarity(a, b []float32) float64 {
 	if len(a) != len(b) || len(a) == 0 {
 		return 0.0

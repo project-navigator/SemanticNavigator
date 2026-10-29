@@ -119,7 +119,6 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 	}
 	s.workspaceDir = params.WorkspacePath
 
-	// Open or create SQLite storage in workspace storage directory
 	dbPath := filepath.Join(params.StoragePath, "semantic_index.db")
 	if s.storage != nil {
 		_ = s.storage.Close()
@@ -132,7 +131,6 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 	}
 	s.storage = store
 
-	// Initialize OpenAI-compatible embedding provider
 	prov, err := provider.NewOpenAIProvider(params.Provider)
 	if err != nil {
 		store.Close()
@@ -141,7 +139,6 @@ func (s *Server) handleInitialize(req *protocol.Request) {
 		s.sendResponse(protocol.NewErrorResponse(req.ID, protocol.CodeProviderError, "Failed to initialize embedding provider: "+err.Error(), nil))
 		return
 	}
-	// Include workspace, endpoint, model and chunking version, never credentials.
 	fingerprint := hashBytes([]byte(params.WorkspacePath + "\n" + strings.TrimRight(params.Provider.BaseURL, "/") + "\n" + prov.Model() + "\nchunker-v2"))
 	if err := store.EnsureFingerprint(fingerprint); err != nil {
 		store.Close()
@@ -192,13 +189,11 @@ func (s *Server) handleIndexStart(req *protocol.Request) {
 	s.isIndexing = true
 	s.indexingMu.Unlock()
 
-	// Respond immediately to avoid blocking client
 	s.sendResponse(protocol.NewResponse(req.ID, protocol.IndexResult{
 		Status:  "started",
 		Message: "Indexing started in background",
 	}))
 
-	// Execute background indexing
 	go s.indexLoop(params.ForceReindex)
 }
 
@@ -334,7 +329,7 @@ func (s *Server) runIndexing(forceReindex bool) {
 			}
 			if existingHash == fileHash {
 				processedFiles++
-				continue // Skip unchanged file (incremental indexing)
+				continue
 			}
 		}
 
@@ -389,7 +384,6 @@ func (s *Server) runIndexing(forceReindex bool) {
 			}
 		}
 
-		// Prepare storage chunks
 		storageChunks := make([]storage.Chunk, len(codeChunks))
 		for i, c := range codeChunks {
 			storageChunks[i] = storage.Chunk{
@@ -476,7 +470,6 @@ func (s *Server) handleSearch(req *protocol.Request) {
 		s.sendResponse(protocol.NewResponse(req.ID, protocol.SearchResult{Query: query, Matches: []protocol.SearchMatch{}}))
 		return
 	}
-	// 1. Get embedding for the search query (multilingual model handles cross-lingual alignment)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	queryEmbeddings, err := s.provider.EmbedStrings(ctx, []string{query})
 	cancel()
@@ -498,14 +491,12 @@ func (s *Server) handleSearch(req *protocol.Request) {
 		}
 	}
 
-	// 3. Query native SQLite FTS5 for BM25 lexical matches
 	bm25Matches, _ := s.storage.SearchBM25(query, topK*3)
 	bm25Ranks := make(map[int64]int, len(bm25Matches))
 	for r, m := range bm25Matches {
 		bm25Ranks[m.ChunkID] = r + 1
 	}
 
-	// 4. Perform Hybrid Search with RRF combining dense vectors and SQLite BM25
 	scored := s.searcher.SearchRRF(allChunks, queryEmbeddings[0], bm25Ranks, topK)
 
 	matches := []protocol.SearchMatch{}

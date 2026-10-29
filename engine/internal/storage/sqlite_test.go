@@ -20,7 +20,6 @@ func TestStorageLifecycle(t *testing.T) {
 	}
 	defer store.Close()
 
-	// 1. Test Metadata
 	if err := store.SetMetadata("model", "text-embedding-3-small"); err != nil {
 		t.Fatalf("failed to set metadata: %v", err)
 	}
@@ -29,7 +28,6 @@ func TestStorageLifecycle(t *testing.T) {
 		t.Fatalf("expected text-embedding-3-small, got %s, err: %v", val, err)
 	}
 
-	// 2. Test File upsert & hash
 	filePath := "/workspace/Service.cs"
 	hash := "abc123sha"
 	if err := store.UpsertFile(filePath, hash); err != nil {
@@ -40,7 +38,6 @@ func TestStorageLifecycle(t *testing.T) {
 		t.Fatalf("expected hash %s, got %s, err: %v", hash, savedHash, err)
 	}
 
-	// 3. Test SaveChunks
 	chunks := []Chunk{
 		{
 			FilePath:   filePath,
@@ -58,7 +55,6 @@ func TestStorageLifecycle(t *testing.T) {
 		t.Fatalf("failed to save chunks: %v", err)
 	}
 
-	// 4. Test GetAllChunks
 	loaded, err := store.GetAllChunks()
 	if err != nil {
 		t.Fatalf("failed to get all chunks: %v", err)
@@ -73,13 +69,11 @@ func TestStorageLifecycle(t *testing.T) {
 		t.Errorf("embedding mismatch: %+v", loaded[0].Embedding)
 	}
 
-	// 5. Test Stats
 	filesCount, chunksCount, err := store.GetStats()
 	if err != nil || filesCount != 1 || chunksCount != 1 {
 		t.Fatalf("stats mismatch: files=%d, chunks=%d, err=%v", filesCount, chunksCount, err)
 	}
 
-	// 6. Test DeleteFile
 	if err := store.DeleteFile(filePath); err != nil {
 		t.Fatalf("failed to delete file: %v", err)
 	}

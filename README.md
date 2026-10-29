@@ -74,6 +74,6 @@ python3 scripts/evaluate.py --mock --output evaluation/mock-results.json
 dotnet build demo/CodeBY.Shop/CodeBY.Shop.csproj
 ```
 
-Python 3.10+ нужен только оценщику. [Методика и реальный провайдер](evaluation/README.md), [фактические проверки и сценарий защиты](VALIDATION.md), [архитектура](DECISIONS.md), [передача проекта](AGENT_HANDOVER.md), [встречи с экспертами](CONSULTATION_BRIEF.md).
+Python 3.10+ нужен только оценщику. [Методика и реальный провайдер](evaluation/README.md), [архитектура](DECISIONS.md), [передача проекта](AGENT_HANDOVER.md), [встречи с экспертами](CONSULTATION_BRIEF.md).
 
 Архитектуру TypeScript + Go необходимо согласовать с заказчиком: в паспорте указан TypeScript. Достижение 80 баллов не подтверждено одной технической проверкой; нужны реальная оценка поиска, ручная UX-проверка и материалы защиты.

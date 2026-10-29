@@ -6,21 +6,18 @@ import (
 	"semantic-navigator/engine/internal/storage"
 )
 
-// ScoredChunk holds a chunk with its computed score and match attribution.
 type ScoredChunk struct {
 	Chunk       storage.Chunk
 	Score       float64
-	MatchReason string // "semantic (vector)", "exact keyword (BM25)", "hybrid"
+	MatchReason string
 	VectorRank  int
 	BM25Rank    int
 }
 
-// RRFConfig holds Reciprocal Rank Fusion parameters.
-// NOTE FOR ML EXPERT: Discuss optimal k (standard 60 vs 20-30 for code) and vector vs BM25 weights.
 type RRFConfig struct {
-	K            float64 // Smoothing constant (default 60)
-	VectorWeight float64 // Default 1.0
-	BM25Weight   float64 // Default 0.6
+	K            float64
+	VectorWeight float64
+	BM25Weight   float64
 }
 
 func DefaultRRFConfig() RRFConfig {
@@ -31,7 +28,6 @@ func DefaultRRFConfig() RRFConfig {
 	}
 }
 
-// HybridSearcher merges dense vector similarity and SQLite FTS5 BM25 ranks using RRF.
 type HybridSearcher struct {
 	config RRFConfig
 }
@@ -40,8 +36,6 @@ func NewHybridSearcher(cfg RRFConfig) *HybridSearcher {
 	return &HybridSearcher{config: cfg}
 }
 
-// SearchRRF merges vector cosine ranks with SQLite BM25 ranks:
-// RRF_score(d) = W_vec / (k + rank_vec) + W_bm25 / (k + rank_bm25)
 func (s *HybridSearcher) SearchRRF(
 	chunks []storage.Chunk,
 	queryVector []float32,
@@ -52,7 +46,6 @@ func (s *HybridSearcher) SearchRRF(
 		return nil
 	}
 
-	// 1. Dense vector ranking (cosine similarity across all indexed chunks)
 	type rankItem struct {
 		chunk storage.Chunk
 		sim   float64
@@ -73,7 +66,6 @@ func (s *HybridSearcher) SearchRRF(
 		vectorPos[item.chunk.ID] = rank + 1
 	}
 
-	// 2. Compute RRF score for each chunk
 	unmatchedBM25Rank := len(chunks) + 50 // Penalty rank for chunks without exact BM25 keyword matches
 	var scored []ScoredChunk
 

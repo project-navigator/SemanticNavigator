@@ -14,7 +14,6 @@ import (
 	_ "modernc.org/sqlite"
 )
 
-// Chunk represents an indexed fragment of code with its vector embedding.
 type Chunk struct {
 	ID         int64
 	FilePath   string
@@ -27,13 +26,11 @@ type Chunk struct {
 	Embedding  []float32
 }
 
-// Storage manages persistent index data in SQLite.
 type Storage struct {
 	db *sql.DB
 	mu sync.RWMutex
 }
 
-// Open initializes or connects to the SQLite database at dbPath.
 func Open(dbPath string) (*Storage, error) {
 	dir := filepath.Dir(dbPath)
 	if err := os.MkdirAll(dir, 0755); err != nil {
@@ -56,7 +53,6 @@ func Open(dbPath string) (*Storage, error) {
 	return s, nil
 }
 
-// InitSchema creates the tables and indices if they do not exist.
 func (s *Storage) InitSchema() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -103,7 +99,6 @@ func (s *Storage) InitSchema() error {
 	return err
 }
 
-// EncodeFloats converts []float32 into compact IEEE-754 bytes for SQLite BLOB storage.
 func EncodeFloats(floats []float32) []byte {
 	buf := make([]byte, len(floats)*4)
 	for i, f := range floats {
@@ -112,7 +107,6 @@ func EncodeFloats(floats []float32) []byte {
 	return buf
 }
 
-// DecodeFloats restores []float32 from binary bytes.
 func DecodeFloats(buf []byte) []float32 {
 	count := len(buf) / 4
 	floats := make([]float32, count)
@@ -123,7 +117,6 @@ func DecodeFloats(buf []byte) []float32 {
 	return floats
 }
 
-// GetFileHash returns the recorded hash of a file for incremental indexing.
 func (s *Storage) GetFileHash(path string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -136,7 +129,6 @@ func (s *Storage) GetFileHash(path string) (string, error) {
 	return hash, err
 }
 
-// UpsertFile records or updates the hash and modification time of a file.
 func (s *Storage) UpsertFile(path string, hash string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -152,7 +144,6 @@ func (s *Storage) UpsertFile(path string, hash string) error {
 	return err
 }
 
-// DeleteFile removes a file and all its associated chunks from the index.
 func (s *Storage) DeleteFile(path string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -176,14 +167,11 @@ func (s *Storage) DeleteFile(path string) error {
 	return tx.Commit()
 }
 
-// BM25Match represents a lexical match from SQLite FTS5.
 type BM25Match struct {
 	ChunkID   int64
 	BM25Score float64 // SQLite FTS5 bm25 score (smaller is better)
 }
 
-// SearchBM25 performs native SQLite FTS5 BM25 lexical search with column weighting.
-// Column weights: symbol_name=10.0, context=5.0, content=1.0.
 func (s *Storage) SearchBM25(query string, topK int) ([]BM25Match, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -192,7 +180,6 @@ func (s *Storage) SearchBM25(query string, topK int) ([]BM25Match, error) {
 		topK = 20
 	}
 
-	// Escape FTS5 special characters and build search phrase
 	safeQuery := sanitizeFTS5Query(query)
 	if safeQuery == "" {
 		return nil, nil
@@ -239,7 +226,6 @@ func sanitizeFTS5Query(query string) string {
 	return strings.Join(words, " OR ")
 }
 
-// SaveChunks replaces chunks for a given file in both chunks table and FTS5 index.
 func (s *Storage) SaveChunks(filePath string, chunks []Chunk) error {
 	return s.saveFile(filePath, "", chunks, false)
 }
@@ -259,7 +245,6 @@ func (s *Storage) saveFile(filePath, hash string, chunks []Chunk, updateHash boo
 	}
 	defer tx.Rollback()
 
-	// Clear existing chunks and FTS entries for this file
 	if _, err := tx.Exec("DELETE FROM chunks_fts WHERE file_path = ?", filePath); err != nil {
 		return fmt.Errorf("failed to clear old FTS entries: %w", err)
 	}
@@ -319,7 +304,6 @@ func (s *Storage) saveFile(filePath, hash string, chunks []Chunk, updateHash boo
 	return tx.Commit()
 }
 
-// GetAllChunks loads all chunks with their embeddings into memory for vector search.
 func (s *Storage) GetAllChunks() ([]Chunk, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -344,7 +328,6 @@ func (s *Storage) GetAllChunks() ([]Chunk, error) {
 	return chunks, rows.Err()
 }
 
-// GetStats returns current counts of indexed files and chunks.
 func (s *Storage) GetStats() (filesCount int, chunksCount int, err error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -362,7 +345,6 @@ func (s *Storage) GetStats() (filesCount int, chunksCount int, err error) {
 	return filesCount, chunksCount, nil
 }
 
-// SetMetadata stores a key-value setting (e.g. current model name).
 func (s *Storage) SetMetadata(key, value string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -374,7 +356,6 @@ func (s *Storage) SetMetadata(key, value string) error {
 	return err
 }
 
-// GetMetadata retrieves a key-value setting.
 func (s *Storage) GetMetadata(key string) (string, error) {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
@@ -387,14 +368,12 @@ func (s *Storage) GetMetadata(key string) (string, error) {
 	return value, err
 }
 
-// Close closes the database connection.
 func (s *Storage) Close() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	return s.db.Close()
 }
 
-// EnsureFingerprint clears incompatible vectors before they can be searched.
 // API keys are intentionally excluded from the caller's fingerprint.
 func (s *Storage) EnsureFingerprint(fingerprint string) error {
 	s.mu.Lock()

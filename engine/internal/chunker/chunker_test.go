@@ -120,12 +120,10 @@ namespace Kontur.Security
 		t.Errorf("expected symbol ValidateJwtToken, got %s", c.SymbolName)
 	}
 
-	// Doc comment should be embedded in content
 	if !strings.Contains(c.Content, "Проверяет срок действия и подпись JWT токена") {
 		t.Errorf("expected doc comment in Content, got: %s", c.Content)
 	}
 
-	// Test Token Budget
 	longText := make([]byte, 5000)
 	for i := range longText {
 		longText[i] = 'a'

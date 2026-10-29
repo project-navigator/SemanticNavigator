@@ -90,7 +90,6 @@ export class QuickPickSearch {
       }, 350);
     });
 
-    // Instant preview on arrow key navigation
     quickPick.onDidChangeActive(async (activeItems) => {
       if (activeItems.length > 0 && activeItems[0].match.filePath) {
         const match = activeItems[0].match;
@@ -98,7 +97,6 @@ export class QuickPickSearch {
       }
     });
 
-    // Jump to code on Enter
     quickPick.onDidAccept(async () => {
       const selected = quickPick.selectedItems[0];
       if (selected && selected.match.filePath) {
@@ -144,7 +142,6 @@ export class QuickPickSearch {
         vscode.TextEditorRevealType.InCenter
       );
     } catch {
-      // Ignored if file cannot be opened
     }
   }
 }

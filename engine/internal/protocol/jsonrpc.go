@@ -5,36 +5,30 @@ import (
 	"fmt"
 )
 
-// JSON-RPC 2.0 constants
 const (
 	Version = "2.0"
 
-	// Standard error codes
 	CodeParseError     = -32700
 	CodeInvalidRequest = -32600
 	CodeMethodNotFound = -32601
 	CodeInvalidParams  = -32602
 	CodeInternalError  = -32603
 
-	// Custom engine error codes
 	CodeProviderError = -32001
 	CodeStorageError  = -32002
 )
 
-// Request is a JSON-RPC 2.0 request or notification.
 type Request struct {
-	JSONRPC string          `json:"jsonrpc"`
+	JSONRPC string           `json:"jsonrpc"`
 	ID      *json.RawMessage `json:"id,omitempty"`
-	Method  string          `json:"method"`
-	Params  json.RawMessage `json:"params,omitempty"`
+	Method  string           `json:"method"`
+	Params  json.RawMessage  `json:"params,omitempty"`
 }
 
-// IsNotification returns true if the request is a notification (no ID).
 func (r *Request) IsNotification() bool {
 	return r.ID == nil
 }
 
-// Response is a JSON-RPC 2.0 response.
 type Response struct {
 	JSONRPC string           `json:"jsonrpc"`
 	ID      *json.RawMessage `json:"id"`
@@ -42,7 +36,6 @@ type Response struct {
 	Error   *RPCError        `json:"error,omitempty"`
 }
 
-// RPCError is a JSON-RPC 2.0 error object.
 type RPCError struct {
 	Code    int         `json:"code"`
 	Message string      `json:"message"`
@@ -53,7 +46,6 @@ func (e *RPCError) Error() string {
 	return fmt.Sprintf("RPC Error %d: %s", e.Code, e.Message)
 }
 
-// Notification sends a notification to client.
 type Notification struct {
 	JSONRPC string      `json:"jsonrpc"`
 	Method  string      `json:"method"`
@@ -88,13 +80,11 @@ func NewNotification(method string, params interface{}) *Notification {
 	}
 }
 
-// --- Protocol Messages Payload Definitions ---
-
 type ProviderConfig struct {
-	Type    string `json:"type"`    // "openai-compatible"
-	BaseURL string `json:"baseUrl"` // e.g. "https://api.openai.com/v1" or local
-	APIKey  string `json:"apiKey"`  // Bearer token
-	Model   string `json:"model"`   // e.g. "text-embedding-3-small"
+	Type    string `json:"type"`
+	BaseURL string `json:"baseUrl"`
+	APIKey  string `json:"apiKey"`
+	Model   string `json:"model"`
 }
 
 type InitializeParams struct {
@@ -114,12 +104,12 @@ type IndexParams struct {
 }
 
 type IndexResult struct {
-	Status  string `json:"status"` // "started", "already_running"
+	Status  string `json:"status"`
 	Message string `json:"message"`
 }
 
 type IndexProgressParams struct {
-	Phase           string  `json:"phase"` // "scanning", "chunking", "embedding", "done", "error"
+	Phase           string  `json:"phase"`
 	TotalFiles      int     `json:"totalFiles"`
 	ProcessedFiles  int     `json:"processedFiles"`
 	TotalChunks     int     `json:"totalChunks"`
@@ -142,7 +132,7 @@ type SearchMatch struct {
 	Snippet      string  `json:"snippet"`
 	SymbolName   string  `json:"symbolName,omitempty"`
 	Score        float64 `json:"score"`
-	MatchReason  string  `json:"matchReason,omitempty"` // "vector", "lexical", "hybrid"
+	MatchReason  string  `json:"matchReason,omitempty"`
 }
 
 type SearchResult struct {
@@ -152,7 +142,7 @@ type SearchResult struct {
 }
 
 type StatusResult struct {
-	State         string `json:"state"` // "idle", "indexing", "ready", "error"
+	State         string `json:"state"`
 	IndexedFiles  int    `json:"indexedFiles"`
 	IndexedChunks int    `json:"indexedChunks"`
 	LastIndexedAt string `json:"lastIndexedAt,omitempty"`

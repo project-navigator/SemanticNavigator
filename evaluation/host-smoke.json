@@ -1,5 +1,6 @@
 {
   "result": "PASS",
+  "source": "vsix",
   "hostVersion": "1.143.1",
   "provider": "local mock, no API key",
   "indexedChunks": 12,
@@ -10,8 +11,10 @@
     "exact symbol search",
     "editor line selection",
     "create/change/rename/delete watcher",
+    "directory rename/delete and uppercase extension",
     "model invalidation",
     "search command",
     "sidebar command"
-  ]
+  ],
+  "vsixSHA256": "7e9cb1521feab45c6377612315980aa5378d0c7ea02aebd14c625c532cecc54b"
 }

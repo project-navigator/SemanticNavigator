@@ -44,7 +44,6 @@ export async function activate(context: vscode.ExtensionContext) {
       apiKey: config.get('apiKey', ''),
       model: config.get('model', 'text-embedding-3-small'),
     };
-    // Explicit opt-in protects source code from being sent on first activation.
     indexingEnabled = config.get('enabled', false) && vscode.workspace.isTrusted;
     if (!indexingEnabled) {
       status.setIdle();
@@ -94,7 +93,6 @@ export async function activate(context: vscode.ExtensionContext) {
   );
   restart();
   await restarting;
-  // Small read-only API also used by the isolated Extension Host smoke test.
   return { getStatus: () => engine.getStatus(), search: (query: string) => engine.search(query) };
 }
 

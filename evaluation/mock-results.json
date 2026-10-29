@@ -1,12 +1,12 @@
 {
   "mode": "MOCK_FUNCTIONAL_ONLY",
-  "timestampUTC": "2026-10-29T17:22:31.509678+00:00",
+  "timestampUTC": "2026-10-29T17:27:42.825566+00:00",
   "model": "mock-token-hash-128",
-  "providerUrl": "http://127.0.0.1:53430/v1",
+  "providerUrl": "http://127.0.0.1:53537/v1",
   "engineVersion": "0.1.0",
   "datasetSHA256": "737b2b9dbc5175908039b966f1efd5caf16aacee35f935c1cf68f2ec6cbe2542",
   "sourceSHA256": "78835e60d62dcf1e1ed3409da18f511d4f73573c81724b94e204fdb4e3edb341",
-  "indexingMs": 5.395291002059821,
+  "indexingMs": 4.693791997851804,
   "queryCount": 30,
   "metrics": {
     "Hit@5": 0.7333333333333333,
@@ -31,8 +31,8 @@
     }
   },
   "latencyMs": {
-    "p50": 0.5603750032605603,
-    "p95": 0.742958000046201
+    "p50": 0.6086249995860271,
+    "p95": 1.2032910017296672
   },
   "queries": [
     {
@@ -54,7 +54,7 @@
         "ShopService.cs#HashPassword",
         "ShopService.cs#PaginateOrders"
       ],
-      "latencyMs": 1.0175830029766075,
+      "latencyMs": 0.8266250006272458,
       "engineDurationMs": 0
     },
     {
@@ -76,7 +76,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#ReserveStock"
       ],
-      "latencyMs": 0.742958000046201,
+      "latencyMs": 0.6086249995860271,
       "engineDurationMs": 0
     },
     {
@@ -98,7 +98,7 @@
         "ShopService.cs#ExportOrdersCsv",
         "ShopService.cs#FindOrdersByDate"
       ],
-      "latencyMs": 0.5603750032605603,
+      "latencyMs": 0.49504100024932995,
       "engineDurationMs": 0
     },
     {
@@ -120,7 +120,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#ConvertCurrency"
       ],
-      "latencyMs": 0.5792500014649704,
+      "latencyMs": 0.4240830021444708,
       "engineDurationMs": 0
     },
     {
@@ -142,7 +142,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.5640419985866174,
+      "latencyMs": 0.49795800441643223,
       "engineDurationMs": 0
     },
     {
@@ -164,7 +164,7 @@
         "ShopService.cs#RetryAsync",
         "ShopService.cs#PaginateOrders"
       ],
-      "latencyMs": 0.5916670052101836,
+      "latencyMs": 0.5576670009759255,
       "engineDurationMs": 0
     },
     {
@@ -186,7 +186,7 @@
         "ShopService.cs#RetryAsync",
         "ShopService.cs#ValidateToken"
       ],
-      "latencyMs": 0.6604579975828528,
+      "latencyMs": 0.5037919981987216,
       "engineDurationMs": 0
     },
     {
@@ -208,7 +208,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#ReserveStock"
       ],
-      "latencyMs": 0.5996660038363189,
+      "latencyMs": 0.4147500003455207,
       "engineDurationMs": 0
     },
     {
@@ -230,7 +230,7 @@
         "ShopService.cs#ValidateUpload",
         "ShopService.cs#ValidateToken"
       ],
-      "latencyMs": 0.5735419981647283,
+      "latencyMs": 0.4293329984648153,
       "engineDurationMs": 0
     },
     {
@@ -252,7 +252,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.5203749969950877,
+      "latencyMs": 0.36604100023396313,
       "engineDurationMs": 0
     },
     {
@@ -274,7 +274,7 @@
         "ShopService.cs#CalculateInvoiceTotal",
         "ShopService.cs#HashPassword"
       ],
-      "latencyMs": 0.532291000126861,
+      "latencyMs": 0.5089580008643679,
       "engineDurationMs": 0
     },
     {
@@ -296,7 +296,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#ConvertCurrency"
       ],
-      "latencyMs": 0.48683299974072725,
+      "latencyMs": 0.5908750026719645,
       "engineDurationMs": 0
     },
     {
@@ -318,7 +318,7 @@
         "ShopService.cs#ValidateToken",
         "ShopService.cs#PaginateOrders"
       ],
-      "latencyMs": 0.4893749937764369,
+      "latencyMs": 0.5519170008483343,
       "engineDurationMs": 0
     },
     {
@@ -340,7 +340,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.46783399739069864,
+      "latencyMs": 0.7155830026022159,
       "engineDurationMs": 0
     },
     {
@@ -362,8 +362,8 @@
         "ShopService.cs#MaskCardNumber",
         "ShopService.cs#ReserveStock"
       ],
-      "latencyMs": 0.6497919966932386,
-      "engineDurationMs": 0
+      "latencyMs": 1.3547920025303029,
+      "engineDurationMs": 1
     },
     {
       "id": "q16",
@@ -384,7 +384,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.4931250005029142,
+      "latencyMs": 1.0015829975600354,
       "engineDurationMs": 0
     },
     {
@@ -406,7 +406,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.5391669983509928,
+      "latencyMs": 1.2032910017296672,
       "engineDurationMs": 0
     },
     {
@@ -428,7 +428,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.46395800018217415,
+      "latencyMs": 1.1028330045519397,
       "engineDurationMs": 0
     },
     {
@@ -450,7 +450,7 @@
         "ShopService.cs#ValidateUpload",
         "ShopService.cs#ValidateToken"
       ],
-      "latencyMs": 0.47162499686237425,
+      "latencyMs": 0.7812080002622679,
       "engineDurationMs": 0
     },
     {
@@ -472,7 +472,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.44587500451598316,
+      "latencyMs": 0.49479200242785737,
       "engineDurationMs": 0
     },
     {
@@ -494,7 +494,7 @@
         "ShopService.cs#DeduplicateEmails",
         "ShopService.cs#ValidateUpload"
       ],
-      "latencyMs": 0.4791250030393712,
+      "latencyMs": 0.5102499999338761,
       "engineDurationMs": 0
     },
     {
@@ -516,7 +516,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.4546670024865307,
+      "latencyMs": 0.4310410004109144,
       "engineDurationMs": 0
     },
     {
@@ -538,7 +538,7 @@
         "ShopService.cs#ExportOrdersCsv",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.6303339978330769,
+      "latencyMs": 0.6188330007717013,
       "engineDurationMs": 0
     },
     {
@@ -560,7 +560,7 @@
         "ShopService.cs#ConvertCurrency",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.6499169976450503,
+      "latencyMs": 0.619791004282888,
       "engineDurationMs": 0
     },
     {
@@ -582,7 +582,7 @@
         "ShopService.cs#MaskCardNumber",
         "ShopService.cs#PaginateOrders"
       ],
-      "latencyMs": 0.5417079955805093,
+      "latencyMs": 0.8540420021745376,
       "engineDurationMs": 0
     },
     {
@@ -604,7 +604,7 @@
         "ShopService.cs#ReserveStock",
         "ShopService.cs#ExportOrdersCsv"
       ],
-      "latencyMs": 0.5891249966225587,
+      "latencyMs": 0.7570410016342066,
       "engineDurationMs": 0
     },
     {
@@ -626,7 +626,7 @@
         "ShopService.cs#MaskCardNumber",
         "ShopService.cs#ReserveStock"
       ],
-      "latencyMs": 0.5118330009281635,
+      "latencyMs": 1.0882080023293383,
       "engineDurationMs": 0
     },
     {
@@ -648,7 +648,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#CalculateInvoiceTotal"
       ],
-      "latencyMs": 0.5784160020994022,
+      "latencyMs": 0.7260409984155558,
       "engineDurationMs": 0
     },
     {
@@ -670,7 +670,7 @@
         "ShopService.cs#PaginateOrders",
         "ShopService.cs#ConvertCurrency"
       ],
-      "latencyMs": 0.5872920010006055,
+      "latencyMs": 0.9210830030497164,
       "engineDurationMs": 0
     },
     {
@@ -692,7 +692,7 @@
         "ShopService.cs#MaskCardNumber",
         "ShopService.cs#ConvertCurrency"
       ],
-      "latencyMs": 0.7275000025401823,
+      "latencyMs": 0.8297500025946647,
       "engineDurationMs": 0
     }
   ]

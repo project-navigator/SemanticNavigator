@@ -89,7 +89,6 @@ export class EngineClient {
       }
     });
 
-    // Send initialize request
     const initParams: InitializeParams = {
       workspacePath,
       storagePath,
@@ -175,7 +174,6 @@ export class EngineClient {
     try {
       const msg = JSON.parse(line);
 
-      // Notification (no ID)
       if (msg.id === undefined || msg.id === null) {
         if (msg.method === 'index/progress' && msg.params) {
           for (const listener of this.progressListeners) {
@@ -185,7 +183,6 @@ export class EngineClient {
         return;
       }
 
-      // Request response
       const pending = this.pendingRequests.get(msg.id);
       if (pending) {
         clearTimeout(pending.timer);

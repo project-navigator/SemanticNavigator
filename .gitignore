@@ -1,0 +1,42 @@
+# Binaries and build outputs
+bin/
+dist/
+out/
+build/
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Dependencies
+node_modules/
+vendor/
+
+# Package archives
+*.vsix
+*.tgz
+*.zip
+
+# SQLite databases & temp storage
+*.db
+*.db-journal
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+.storage/
+
+# Logs & temp
+*.log
+tmp/
+temp/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# IDE and Editor
+.vscode-test/
+.idea/
+*.suo
+*.user
